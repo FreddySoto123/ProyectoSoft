@@ -4,7 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../LoginScreen';
 import RegisterScreen from '../RegisterScreen';
 import HomeScreen from '../HomeScreen';
-
+import ServicesScreen from '../ServicesScreen';
+import SimulationScreen from '../SimulationScreen';
 const Stack = createNativeStackNavigator();
 
 const AuthNavigator = () => (
@@ -13,6 +14,8 @@ const AuthNavigator = () => (
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Services" component={ServicesScreen} />
+      <Stack.Screen name="Simulation" component={SimulationScreen} />
     </Stack.Navigator>
   </NavigationContainer>
 );
