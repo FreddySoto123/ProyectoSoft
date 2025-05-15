@@ -6,6 +6,7 @@ import RegisterScreen from '../RegisterScreen';
 import HomeScreen from '../HomeScreen';
 import ServicesScreen from '../ServicesScreen';
 import SimulationScreen from '../SimulationScreen';
+import ProfileScreen from '../ProfileScreen';
 const Stack = createNativeStackNavigator();
 
 const AuthNavigator = () => (
@@ -16,6 +17,7 @@ const AuthNavigator = () => (
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Services" component={ServicesScreen} />
       <Stack.Screen name="Simulation" component={SimulationScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   </NavigationContainer>
 );

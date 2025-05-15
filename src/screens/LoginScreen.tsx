@@ -25,7 +25,7 @@ const LoginScreen = () => {
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://172.172.7.33:3001/api/auth/login', {
+      const response = await fetch('http://172.172.9.132:3001/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -35,9 +35,9 @@ const LoginScreen = () => {
 
       if (response.ok) {
         Alert.alert('✅ Bienvenido', `${data.user.name}`);
-        navigation.navigate('Home', { name: data.user.name });
+        navigation.navigate('Home', { userId: data.user.id, name: data.user.name });
       } else {
-        Alert.alert('⚠️ Error', data.message || data.error);
+        Alert.alert('⚠️ Error', data.error);
       }
     } catch (error) {
       Alert.alert('❌ Error de red', 'No se pudo conectar con el servidor.');

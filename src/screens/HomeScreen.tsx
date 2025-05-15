@@ -2,8 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 const HomeScreen = ({ route }) => {
-  const userName = route?.params?.name || 'Usuario';
+  const { userId, name } = route.params;
   const navigation = useNavigation();
+
   return (
     <View style={styles.container}>
       {/* Barra superior */}
@@ -11,7 +12,9 @@ const HomeScreen = ({ route }) => {
         <Text style={styles.headerText}>Bienvenido</Text>
         <View style={styles.headerRight}>
           <Text style={styles.language}>ES ⌄</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Profile", { userId })}>
           <Text style={styles.profileIcon}>👤</Text>
+        </TouchableOpacity>
         </View>
       </View>
 
@@ -21,7 +24,7 @@ const HomeScreen = ({ route }) => {
         style={styles.logo}
         resizeMode="contain"
       />
-      <Text style={styles.welcomeText}>¿Cómo estás, {userName}?</Text>
+     <Text style={styles.welcomeText}>¿Cómo estás, {name}?</Text>
 
       {/* Opciones principales */}
       <View style={styles.menu}>
