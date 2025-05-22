@@ -16,7 +16,7 @@ const getAllBarbershops = async (req, res) => {
         horario_apertura, 
         horario_cierre, 
         dias_laborales 
-      FROM Barberias 
+      FROM "Barberias"
       ORDER BY nombre ASC; -- Ordenar alfabéticamente es una buena práctica
     `;
     const result = await pool.query(query);

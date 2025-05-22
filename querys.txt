@@ -1,0 +1,114 @@
+-- Conéctate a tu base de datos 'barbersmart' antes de ejecutar esto.
+-- En psql: \c barbersmart
+-- En pgAdmin: Abre un Query Tool para la base de datos 'barbersmart'.
+
+-- Opcional: Eliminar la tabla si ya existe para empezar de cero (útil en desarrollo)
+DROP TABLE IF EXISTS Barberias CASCADE;
+
+-- Crear la tabla 'Barberias'
+CREATE TABLE Barberias (
+    id BIGSERIAL PRIMARY KEY,                       -- ID único autoincremental (BIGSERIAL si esperas muchas barberías)
+    nombre VARCHAR(255) NOT NULL,                   -- Nombre de la barbería
+    direccion TEXT,                                 -- Dirección (TEXT es similar a nvarchar(max))
+    telefono_contacto VARCHAR(50),                  -- Teléfono de contacto de la barbería
+    email_contacto VARCHAR(255),                    -- Email de contacto de la barbería
+    descripcion TEXT,                               -- Descripción de la barbería
+    logo_url VARCHAR(255),                          -- URL del logo
+    horario_apertura TIME,                          -- Hora de apertura general
+    horario_cierre TIME,                            -- Hora de cierre general
+    dias_laborales VARCHAR(100),                    -- Ej: "Lunes-Sábado", "L,M,X,J,V", etc.
+    administrador_id BIGINT NOT NULL,               -- FK al usuario administrador principal
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, -- Fecha y hora de creación
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, -- Fecha y hora de la última actualización
+
+    CONSTRAINT fk_administrador_usuario
+        FOREIGN KEY(administrador_id) 
+        REFERENCES Usuarios(id)
+        ON DELETE RESTRICT -- O SET NULL, o CASCADE dependiendo de tu lógica de negocio
+        ON UPDATE CASCADE
+);
+
+-- Crear un índice en administrador_id para mejorar el rendimiento de las búsquedas por administrador
+CREATE INDEX idx_barberias_administrador_id ON Barberias(administrador_id);
+
+-- Opcional: Crear una función y un trigger para actualizar automáticamente 'updated_at'
+-- (Si ya creaste esta función para la tabla 'users', no necesitas volver a crear la FUNCIÓN, solo el TRIGGER)
+CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_timestamp_barberias
+BEFORE UPDATE ON Barberias
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+-- Comentarios:
+-- BIGSERIAL: Es un tipo de dato autoincremental de 8 bytes, adecuado para IDs que pueden crecer mucho. SERIAL es de 4 bytes.
+-- TEXT: Para campos de texto largos como dirección y descripción.
+-- VARCHAR(255): Longitud común para nombres, emails, URLs.
+-- TIME: Para almacenar solo la hora.
+-- TIMESTAMPTZ: Timestamp con zona horaria, recomendado para created_at y updated_at.
+-- CONSTRAINT fk_administrador_usuario: Define la llave foránea.
+-- ON DELETE RESTRICT: Impide eliminar un usuario si es administrador de una barbería. Podrías cambiarlo a:
+--   ON DELETE SET NULL: Si el usuario se elimina, administrador_id se pone a NULL (necesitarías que la columna permita NULLs).
+--   ON DELETE CASCADE: Si el usuario se elimina, la barbería también se elimina (¡peligroso!).
+
+
+
+______
+
+
+
+
+-- Conéctate a tu base de datos 'barbersmart'.
+
+-- Asegúrate de que exista un usuario con id=1 (o el id que vayas a usar) en la tabla Usuarios.
+-- Si no, inserta uno primero:
+-- INSERT INTO Usuarios (nombre, email, password, telefono, rol) VALUES ('Admin Principal', 'admin@barbersmart.com', 'hash_de_contraseña_segura', '123456789', 'Administrador');
+-- (Luego tendrías que obtener el ID de este usuario insertado para usarlo abajo)
+
+-- Insertar datos de ejemplo en la tabla Barberias
+INSERT INTO Barberias (nombre, direccion, telefono_contacto, email_contacto, descripcion, logo_url, horario_apertura, horario_cierre, dias_laborales, administrador_id) VALUES
+(
+    'Barbería El Filo Dorado',
+    'Calle Falsa 123, Ciudad Ejemplo',
+    '555-1234',
+    'contacto@filodorado.com',
+    'La mejor barbería de la ciudad, especialistas en cortes clásicos y modernos.',
+    'https://i.ibb.co/mCxQ5Q0/barbershop-logo1.png', -- Reemplaza con una URL de logo real o déjalo NULL
+    '09:00:00',
+    '20:00:00',
+    'Lunes-Sábado',
+    1 -- Asumiendo que el usuario con id=1 es el administrador
+),
+(
+    'Urban Cuts & Shaves',
+    'Avenida Siempre Viva 742, Distrito Central',
+    '555-5678',
+    'info@urbancuts.com',
+    'Estilo urbano y las últimas tendencias en barbería. Ambiente relajado.',
+    'https://i.ibb.co/StXG9T1/barbershop-logo2.png', -- Reemplaza con una URL de logo real o déjalo NULL
+    '10:00:00',
+    '21:00:00',
+    'Martes-Domingo',
+    1 -- Puedes tener el mismo administrador o diferentes si tienes más usuarios admin
+),
+(
+    'La Navaja Precisa',
+    'Plaza Mayor, Local 3B, Casco Antiguo',
+    '555-8765',
+    'reservas@navajaprecisa.com',
+    'Tradición y precisión en cada corte. Afeitados con navaja de alta calidad.',
+    NULL, -- Ejemplo sin logo
+    '08:30:00',
+    '19:00:00',
+    'Lunes-Viernes',
+    1 -- Asumiendo que el usuario con id=1 es el administrador
+);
+
+-- Verificar los datos insertados
+SELECT * FROM Barberias;
