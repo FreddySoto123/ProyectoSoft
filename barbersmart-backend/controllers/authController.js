@@ -22,24 +22,53 @@ const register = async (req, res) => {
 
 // Inicio de sesión
 const login = async (req, res) => {
+  console.log("-----------------------------------------");
+  console.log("ENTRANDO A LA RUTA /login (BACKEND)");
+  console.log("Request Body (req.body):", req.body);
+
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    console.error("DATOS FALTANTES en la solicitud de login:", { email, password });
+    return res.status(400).json({ error: "Email y contraseña son requeridos" });
+  }
+
   try {
+    console.log("Buscando usuario con email:", email);
     const result = await pool.query('SELECT id, name, email, password, avatar FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
     if (!user) {
+      console.log("Usuario no encontrado para email:", email);
+      console.log("Respondiendo con error 404 - Usuario no encontrado");
+      console.log("-----------------------------------------");
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
+    console.log("Usuario encontrado:", {id: user.id, name: user.name, email: user.email});
 
+    console.log("Comparando contraseña para usuario:", user.email);
     const isPasswordValid = await bcrypt.compare(password, user.password);
+
     if (!isPasswordValid) {
+      console.log("Contraseña incorrecta para usuario:", user.email);
+      console.log("Respondiendo con error 401 - Contraseña incorrecta");
+      console.log("-----------------------------------------");
       return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
 
-    res.json({ message: 'Login exitoso', user });
+    console.log("Login exitoso para usuario:", user.email);
+    console.log("Respondiendo con éxito 200");
+    console.log("-----------------------------------------");
+    // Remueve la contraseña del objeto usuario antes de enviarlo al frontend
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ message: 'Login exitoso', user: userWithoutPassword });
+
   } catch (error) {
+    console.error('---------------- ERROR EN /login (BACKEND) ----------------');
     console.error('Error al iniciar sesión:', error.message);
+    console.error('Stack del error:', error.stack);
+    console.log("Respondiendo con error 500 - Error en catch");
+    console.log("-----------------------------------------");
     res.status(500).json({ error: 'Error del servidor' });
   }
 };

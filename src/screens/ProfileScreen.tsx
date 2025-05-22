@@ -13,7 +13,7 @@ const ProfileScreen = ({ route }) => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`http://172.172.9.132:3001/api/auth/profile/${userId}`);
+        const response = await fetch(`http://localhost:3001/api/auth/profile/${userId}`);
         const data = await response.json();
 
         if (response.ok) {
@@ -79,7 +79,7 @@ const ProfileScreen = ({ route }) => {
     try {
       // Ensure your backend can handle 'multipart/form-data'
       // and a field named 'avatar' for the image file.
-      const response = await fetch(`http://172.172.9.132:3001/api/auth/profile/${userId}`, {
+      const response = await fetch(`http://localhost:3001/api/auth/profile/${userId}`, {
         method: "PUT", // Or PATCH, depending on your API design
         headers: {
           // 'Content-Type': 'multipart/form-data' is set automatically by fetch when body is FormData
