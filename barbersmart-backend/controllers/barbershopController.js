@@ -16,7 +16,7 @@ const getAllBarbershops = async (req, res) => {
         horario_apertura, 
         horario_cierre, 
         dias_laborales 
-      FROM "Barberias"
+      FROM barberias
       ORDER BY nombre ASC; -- Ordenar alfabéticamente es una buena práctica
     `;
     const result = await pool.query(query);
@@ -37,6 +37,77 @@ const getAllBarbershops = async (req, res) => {
   }
 };
 
+// Obtener una barbería por ID con sus servicios y barberos
+const getBarbershopById = async (req, res) => {
+  const {id} = req.params;
+  console.log(
+    `>>>>>>>>>>>>>> BACKEND: getBarbershopById - INICIO para ID: ${id} <<<<<<<<<<<<<<`,
+  );
+  try {
+    // 1. Obtener datos de la barbería
+    const barbershopQuery = 'SELECT * FROM barberias WHERE id = $1';
+    const barbershopResult = await pool.query(barbershopQuery, [id]);
+
+    if (barbershopResult.rows.length === 0) {
+      console.log(
+        `BACKEND: getBarbershopById - Barbería no encontrada con ID: ${id}`,
+      );
+      return res.status(404).json({error: 'Barbería no encontrada'});
+    }
+    const barbershop = barbershopResult.rows[0];
+    console.log(
+      'BACKEND: getBarbershopById - Datos de la barbería:',
+      barbershop,
+    );
+
+    // 2. Obtener servicios de la barbería
+    const servicesQuery =
+      'SELECT * FROM servicios WHERE barberia_id = $1 ORDER BY nombre ASC';
+    const servicesResult = await pool.query(servicesQuery, [id]);
+    barbershop.servicios = servicesResult.rows; // Añadir como un array al objeto barbershop
+    console.log(
+      `BACKEND: getBarbershopById - ${barbershop.servicios.length} servicios encontrados.`,
+    );
+
+    // 3. Obtener barberos de la barbería (uniendo con la tabla 'users' para obtener nombre y avatar del barbero)
+    const barbersQuery = `
+      SELECT 
+        b.id AS barbero_registro_id,      -- ID del registro en la tabla Barberos
+        b.especialidad,                   -- Viene de la tabla 'barberos'
+        b.descripcion_profesional,        -- Viene de la tabla 'barberos'
+        b.calificacion_promedio,          -- Viene de la tabla 'barberos'
+        u.id AS usuario_id,               -- ID del usuario (de la tabla users)
+        u.name AS nombre_barbero,         -- CORREGIDO: usa 'name' de la tabla 'users'
+        u.email AS email_barbero,         -- Viene de la tabla 'users'
+        u.avatar AS avatar_barbero        -- Viene de la tabla 'users'
+        -- u.telefono AS telefono_barbero -- ELIMINADO: 'telefono' no está en la tabla 'users' según la imagen
+      FROM barberos b
+      JOIN users u ON b.usuario_id = u.id
+      WHERE b.barberia_id = $1 
+        AND b.activo = TRUE 
+        -- AND u.rol = 'Barbero' -- ELIMINADO TEMPORALMENTE: 'rol' no está en 'users' según la imagen
+      ORDER BY u.name ASC; -- CORREGIDO: usa 'name'
+    `;
+    const barbersResult = await pool.query(barbersQuery, [id]);
+    barbershop.barberos = barbersResult.rows; // Añadir como un array al objeto barbershop
+    console.log(
+      `BACKEND: getBarbershopById - ${barbershop.barberos.length} barberos encontrados.`,
+    );
+
+    res.json(barbershop); // Devuelve el objeto barbershop con 'servicios' y 'barberos' anidados
+  } catch (error) {
+    console.error(
+      '>>>>>>>>>>>>>> BACKEND: getBarbershopById - ERROR <<<<<<<<<<<<<<',
+    );
+    console.error('BACKEND getBarbershopById CATCH: Mensaje:', error.message);
+    console.error('BACKEND getBarbershopById CATCH: Stack:', error.stack);
+    res.status(500).json({
+      error: 'Error del servidor al obtener los detalles de la barbería.',
+    });
+  }
+};
+
 module.exports = {
   getAllBarbershops,
+  getBarbershopById,
 };
