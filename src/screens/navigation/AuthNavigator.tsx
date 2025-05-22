@@ -1,48 +1,86 @@
+// AuthNavigator.tsx o como lo llames (ej. AppNavigator.tsx)
 import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import LoginScreen from '../LoginScreen';
-import RegisterScreen from '../RegisterScreen';
-import HomeScreen from '../HomeScreen';
-import ServicesScreen from '../ServicesScreen';
-import SimulationScreen from '../SimulationScreen';
-import ProfileScreen from '../ProfileScreen';
-import SelectBarbershopScreen from '../SelectBarbershopScreen'; // Asegúrate que la ruta sea correcta
-import BarbershopDetailScreen from '../BarbershopDetailScreen'; // Necesitarás crear esta pantalla
 
+// Importa TODAS tus pantallas
+import LoginScreen from '../LoginScreen'; // Ajusta la ruta si es '../screens/LoginScreen'
+import RegisterScreen from '../RegisterScreen'; // Ajusta la ruta
+import HomeScreen from '../HomeScreen'; // Ajusta la ruta
+import ServicesScreen from '../ServicesScreen'; // Ajusta la ruta
+import SimulationScreen from '../SimulationScreen'; // Ajusta la ruta
+import ProfileScreen from '../ProfileScreen'; // Ajusta la ruta
+import SelectBarbershopScreen from '../SelectBarbershopScreen'; // Ajusta la ruta
+import BarbershopDetailScreen from '../BarbershopDetailScreen'; // Ajusta la ruta
+import BarberProfileScreen from '../BarberProfileScreen'; // <--- IMPORTA LA NUEVA PANTALLA (Ajusta la ruta)
+
+// Define tu RootStackParamList incluyendo TODAS las rutas y sus parámetros
 type RootStackParamList = {
   Login: undefined;
   Register: undefined;
-  Home: {userId: string; name: string}; // O como lo tengas definido
+  Home: {userId: string; name: string};
   Services: undefined;
   Simulation: undefined;
-  Profile: {userId: string}; // O como lo tengas definido
-  SelectBarbershop: undefined; // Nueva ruta
-  BarbershopDetail: {barbershopId: number | string; barbershopName: string}; // Nueva ruta para el detalle
-  // Añade otras rutas que necesites
+  Profile: {userId: string};
+  SelectBarbershop: undefined;
+  BarbershopDetail: {barbershopId: number | string; barbershopName: string};
+  BarberProfile: {barberUserId: number | string; barberName: string}; // <--- AÑADE LA NUEVA RUTA Y SUS PARÁMETROS
+  // Añade otras rutas que necesites aquí
 };
 
-const Stack = createNativeStackNavigator();
+// Crea el Stack Navigator con el tipado
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AuthNavigator = () => (
   <NavigationContainer>
     <Stack.Navigator initialRouteName="Register">
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="Services" component={ServicesScreen} />
-      <Stack.Screen name="Simulation" component={SimulationScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{title: 'Inicio'}}
+      />
+      <Stack.Screen
+        name="Services"
+        component={ServicesScreen}
+        options={{title: 'Servicios'}}
+      />
+      <Stack.Screen
+        name="Simulation"
+        component={SimulationScreen}
+        options={{title: 'Simulación de Corte'}}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{title: 'Mi Perfil'}}
+      />
       <Stack.Screen
         name="SelectBarbershop"
         component={SelectBarbershopScreen}
-        options={{title: 'Encuentra tu Barbería'}} // Título en la barra de navegación
+        options={{title: 'Encuentra tu Barbería'}}
       />
       <Stack.Screen
         name="BarbershopDetail"
-        component={BarbershopDetailScreen} // Debes crear este componente
+        component={BarbershopDetailScreen}
         options={({route}) => ({
-          title: route.params.barbershopName || 'Detalles',
+          title: route.params.barbershopName || 'Detalles de Barbería',
+        })}
+      />
+      <Stack.Screen
+        name="BarberProfile"
+        component={BarberProfileScreen}
+        options={({route}) => ({
+          title: route.params.barberName || 'Perfil del Barbero',
         })}
       />
     </Stack.Navigator>

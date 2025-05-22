@@ -9,25 +9,25 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  Dimensions, // Para obtener el ancho de la pantalla
 } from 'react-native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
-// Define la estructura de los objetos que esperas del backend
+// (Tus interfaces Service, Barber, BarbershopDetails y tipos de navegación permanecen igual)
 interface Service {
   id: number | string;
   nombre: string;
-  precio: string | number; // Podría ser string si viene formateado, o number
+  precio: string | number;
   descripcion?: string;
   duracion_estimada_minutos?: number;
 }
 
 interface Barber {
-  usuario_id: number | string; // ID del usuario
+  usuario_id: number | string;
   nombre_barbero: string;
   especialidad?: string;
-  avatar_barbero?: string; // URL del avatar del barbero
-  // otros campos del barbero que quieras mostrar
+  avatar_barbero?: string;
 }
 
 interface BarbershopDetails {
@@ -45,11 +45,9 @@ interface BarbershopDetails {
   barberos: Barber[];
 }
 
-// Tipos para la navegación
 type RootStackParamList = {
-  // ... tus otras rutas
   BarbershopDetail: {barbershopId: number | string; barbershopName: string};
-  // AppointmentBooking: { barbershopId: number | string; serviceId?: string; barberId?: string }; // Ejemplo para futura navegación
+  BarberProfile: {barberUserId: number | string; barberName: string}; // <--- NUEVA RUTA
 };
 
 type BarbershopDetailScreenRouteProp = RouteProp<
@@ -66,6 +64,19 @@ type Props = {
   navigation: BarbershopDetailScreenNavigationProp;
 };
 
+// Un componente simple para íconos (puedes reemplazarlo con react-native-vector-icons)
+const IconText: React.FC<{icon: string; text?: string; style?: object}> = ({
+  icon,
+  text,
+  style,
+}) =>
+  text ? (
+    <View style={styles.iconTextContainer}>
+      <Text style={[styles.iconStyle, style]}>{icon}</Text>
+      <Text style={[styles.infoText, style, styles.iconTextText]}>{text}</Text>
+    </View>
+  ) : null;
+
 const BarbershopDetailScreen: React.FC<Props> = ({route, navigation}) => {
   const {barbershopId, barbershopName} = route.params;
   const [barbershop, setBarbershop] = useState<BarbershopDetails | null>(null);
@@ -73,29 +84,18 @@ const BarbershopDetailScreen: React.FC<Props> = ({route, navigation}) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Actualizar el título de la pantalla si no se hizo en el navigator
-    // navigation.setOptions({ title: barbershopName || 'Detalles de Barbería' });
-
     const fetchDetails = async () => {
+      // ... (tu lógica de fetchDetails permanece igual) ...
       setLoading(true);
       setError(null);
-      console.log(
-        `BARBERSHOP DETAIL SCREEN - Fetching details for barbershopId: ${barbershopId}`,
-      );
       try {
         const response = await fetch(
           `http://localhost:3001/api/barbershops/${barbershopId}`,
         );
         const data = await response.json();
-
         if (response.ok) {
-          console.log('BARBERSHOP DETAIL SCREEN - Details fetched:', data);
           setBarbershop(data);
         } else {
-          console.error(
-            'BARBERSHOP DETAIL SCREEN - Error fetching details (response not ok):',
-            data,
-          );
           setError(data.error || 'No se pudieron cargar los detalles.');
           Alert.alert(
             'Error',
@@ -103,32 +103,27 @@ const BarbershopDetailScreen: React.FC<Props> = ({route, navigation}) => {
           );
         }
       } catch (e) {
-        console.error(
-          'BARBERSHOP DETAIL SCREEN - Network error fetching details:',
-          e,
-        );
         setError('Error de red al cargar detalles.');
         Alert.alert('Error de Red', 'No se pudo conectar con el servidor.');
       } finally {
         setLoading(false);
       }
     };
-
     fetchDetails();
-  }, [barbershopId, navigation, barbershopName]);
+  }, [barbershopId]);
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text>Cargando detalles...</Text>
+      <View style={[styles.screenContainer, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#333" />
+        <Text style={styles.loadingText}>Cargando detalles...</Text>
       </View>
     );
   }
 
   if (error || !barbershop) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
+      <View style={[styles.screenContainer, styles.centerContent]}>
         <Text style={styles.errorText}>
           {error || 'No se encontraron datos de la barbería.'}
         </Text>
@@ -136,18 +131,7 @@ const BarbershopDetailScreen: React.FC<Props> = ({route, navigation}) => {
     );
   }
 
-  // Función para navegar a la pantalla de agendar cita (necesitarás crearla)
   const handleBookAppointment = (service?: Service, barber?: Barber) => {
-    console.log('Intentando agendar cita con:', {
-      barbershopId: barbershop.id,
-      service,
-      barber,
-    });
-    // navigation.navigate('AppointmentBooking', {
-    //   barbershopId: barbershop.id,
-    //   serviceId: service?.id,
-    //   barberId: barber?.usuario_id
-    // });
     Alert.alert(
       'Próximamente',
       'Funcionalidad de agendar cita aún no implementada.',
@@ -156,266 +140,346 @@ const BarbershopDetailScreen: React.FC<Props> = ({route, navigation}) => {
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContentContainer}>
-      {barbershop.logo_url && (
+      style={styles.screenContainer}
+      contentContainerStyle={styles.scrollContentContainer}
+      showsVerticalScrollIndicator={false}>
+      {/* Imagen de Portada / Logo */}
+      {barbershop.logo_url ? (
         <Image
           source={{uri: barbershop.logo_url}}
-          style={styles.logo}
-          resizeMode="contain"
+          style={styles.headerImage}
+          resizeMode="cover"
         />
+      ) : (
+        <View style={[styles.headerImage, styles.headerImagePlaceholder]}>
+          <Text style={styles.headerImagePlaceholderText}>💈</Text>
+        </View>
       )}
-      <Text style={styles.barbershopName}>{barbershop.nombre}</Text>
 
-      {barbershop.direccion && (
-        <Text style={styles.infoText}>
-          <Text style={styles.infoLabel}>Dirección:</Text>{' '}
-          {barbershop.direccion}
-        </Text>
-      )}
-      {barbershop.telefono_contacto && (
-        <Text style={styles.infoText}>
-          <Text style={styles.infoLabel}>Teléfono:</Text>{' '}
-          {barbershop.telefono_contacto}
-        </Text>
-      )}
-      {barbershop.email_contacto && (
-        <Text style={styles.infoText}>
-          <Text style={styles.infoLabel}>Email:</Text>{' '}
-          {barbershop.email_contacto}
-        </Text>
-      )}
-      {barbershop.dias_laborales && (
-        <Text style={styles.infoText}>
-          <Text style={styles.infoLabel}>Días:</Text>{' '}
-          {barbershop.dias_laborales}
-        </Text>
-      )}
-      {barbershop.horario_apertura && barbershop.horario_cierre && (
-        <Text style={styles.infoText}>
-          <Text style={styles.infoLabel}>Horario:</Text>{' '}
-          {barbershop.horario_apertura.substring(0, 5)} -{' '}
-          {barbershop.horario_cierre.substring(0, 5)}
-        </Text>
-      )}
-      {barbershop.descripcion && (
-        <Text style={styles.description}>{barbershop.descripcion}</Text>
-      )}
+      <View style={styles.contentCard}>
+        <Text style={styles.barbershopName}>{barbershop.nombre}</Text>
+
+        {barbershop.descripcion && (
+          <Text style={styles.description}>{barbershop.descripcion}</Text>
+        )}
+
+        <View style={styles.infoSection}>
+          <IconText icon="📍" text={barbershop.direccion} />
+          <IconText icon="📞" text={barbershop.telefono_contacto} />
+          <IconText icon="✉️" text={barbershop.email_contacto} />
+          <IconText icon="🗓️" text={barbershop.dias_laborales} />
+          {barbershop.horario_apertura && barbershop.horario_cierre && (
+            <IconText
+              icon="⏰"
+              text={`${barbershop.horario_apertura.substring(
+                0,
+                5,
+              )} - ${barbershop.horario_cierre.substring(0, 5)}`}
+            />
+          )}
+        </View>
+      </View>
 
       {/* Sección de Servicios */}
-      <Text style={styles.sectionTitle}>Servicios</Text>
-      {barbershop.servicios && barbershop.servicios.length > 0 ? (
-        barbershop.servicios.map(service => (
-          <TouchableOpacity
-            key={service.id}
-            style={styles.listItem}
-            onPress={() => handleBookAppointment(service)}>
-            <View style={styles.listItemContent}>
-              <Text style={styles.itemName}>{service.nombre}</Text>
-              {service.descripcion && (
-                <Text style={styles.itemDescription}>
-                  {service.descripcion}
-                </Text>
-              )}
-            </View>
-            <View style={styles.listItemPriceContainer}>
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Nuestros Servicios</Text>
+        {barbershop.servicios && barbershop.servicios.length > 0 ? (
+          barbershop.servicios.map(service => (
+            <TouchableOpacity
+              key={`service-${service.id}`}
+              style={styles.cardItem}
+              onPress={() => handleBookAppointment(service)}>
+              <View style={styles.cardItemTextContainer}>
+                <Text style={styles.cardItemName}>{service.nombre}</Text>
+                {service.descripcion && (
+                  <Text style={styles.cardItemDescription}>
+                    {service.descripcion}
+                  </Text>
+                )}
+                {service.duracion_estimada_minutos && (
+                  <Text style={styles.itemDuration}>
+                    Duración: {service.duracion_estimada_minutos} min
+                  </Text>
+                )}
+              </View>
               <Text style={styles.itemPrice}>
                 Bs {Number(service.precio).toFixed(2)}
               </Text>
-              {service.duracion_estimada_minutos && (
-                <Text style={styles.itemDuration}>
-                  {service.duracion_estimada_minutos} min
-                </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        ))
-      ) : (
-        <Text style={styles.emptyText}>
-          No hay servicios disponibles en esta barbería.
-        </Text>
-      )}
+            </TouchableOpacity>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>No hay servicios disponibles.</Text>
+        )}
+      </View>
 
       {/* Sección de Barberos */}
-      <Text style={styles.sectionTitle}>Barberos</Text>
-      {barbershop.barberos && barbershop.barberos.length > 0 ? (
-        barbershop.barberos.map(barber => (
-          <TouchableOpacity
-            key={barber.usuario_id}
-            style={styles.listItemBarber}
-            onPress={() => handleBookAppointment(undefined, barber)}>
-            {barber.avatar_barbero ? (
-              <Image
-                source={{uri: barber.avatar_barbero}}
-                style={styles.barberAvatar}
-              />
-            ) : (
-              <View style={[styles.barberAvatar, styles.avatarPlaceholder]}>
-                <Text style={styles.avatarPlaceholderText}>👤</Text>
-              </View>
-            )}
-            <View style={styles.barberInfo}>
-              <Text style={styles.itemName}>{barber.nombre_barbero}</Text>
-              {barber.especialidad && (
-                <Text style={styles.itemDescription}>
-                  {barber.especialidad}
-                </Text>
-              )}
-            </View>
-            {/* Podrías añadir un botón "Seleccionar" o "Ver Horarios" */}
-          </TouchableOpacity>
-        ))
-      ) : (
-        <Text style={styles.emptyText}>
-          No hay barberos asignados a esta barbería.
-        </Text>
-      )}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>Nuestro Equipo</Text>
+        {barbershop.barberos && barbershop.barberos.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScroll}>
+            {barbershop.barberos.map(barber => (
+              <TouchableOpacity
+                key={`barber-${barber.usuario_id}`}
+                style={styles.barberCard}
+                onPress={() =>
+                  navigation.navigate('BarberProfile', {
+                    // <--- CAMBIO AQUÍ
+                    barberUserId: barber.usuario_id, // Pasar el ID del usuario del barbero
+                    barberName: barber.nombre_barbero, // Pasar el nombre para el título de la siguiente pantalla
+                  })
+                }>
+                {barber.avatar_barbero ? (
+                  <Image
+                    source={{uri: barber.avatar_barbero}}
+                    style={styles.barberAvatar}
+                  />
+                ) : (
+                  <View style={[styles.barberAvatar, styles.avatarPlaceholder]}>
+                    <Text style={styles.avatarPlaceholderTextBig}>👤</Text>
+                  </View>
+                )}
+                <Text style={styles.barberName}>{barber.nombre_barbero}</Text>
+                {barber.especialidad && (
+                  <Text style={styles.barberSpecialty}>
+                    {barber.especialidad}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.emptyText}>No hay barberos asignados.</Text>
+        )}
+      </View>
 
       <TouchableOpacity
         style={styles.bookButton}
         onPress={() => handleBookAppointment()}>
-        <Text style={styles.bookButtonText}>Agendar Cita General</Text>
+        <Text style={styles.bookButtonText}>Agendar una Cita</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 };
 
+const screenWidth = Dimensions.get('window').width;
+
 const styles = StyleSheet.create({
-  container: {
+  screenContainer: {
     flex: 1,
-    backgroundColor: '#f9f5f0',
+    backgroundColor: '#f0f0f0', // Un gris más claro para el fondo general
   },
   scrollContentContainer: {
-    padding: 20,
+    paddingBottom: 40, // Espacio al final del scroll
   },
   centerContent: {
+    flex: 1, // Asegura que ocupe toda la pantalla para centrar
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  logo: {
-    width: '80%',
-    height: 150,
-    alignSelf: 'center',
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#555',
+  },
+  headerImage: {
+    width: '100%',
+    height: 220, // Altura mayor para la imagen de portada
+    backgroundColor: '#ccc', // Color mientras carga la imagen
+  },
+  headerImagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#e0e0e0',
+  },
+  headerImagePlaceholderText: {
+    fontSize: 80,
+    color: '#bbb',
+  },
+  contentCard: {
+    backgroundColor: '#ffffff',
+    padding: 20,
+    marginHorizontal: 15,
+    marginTop: -50, // Solapar ligeramente con la imagen de header
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     marginBottom: 20,
-    borderRadius: 10,
   },
   barbershopName: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#222',
+    fontSize: 28,
+    fontWeight: 'bold', // '700' es más específico
+    color: '#2c3e50', // Un azul oscuro/gris
     textAlign: 'center',
     marginBottom: 15,
   },
-  infoText: {
-    fontSize: 16,
-    color: '#444',
-    marginBottom: 5,
-  },
-  infoLabel: {
-    fontWeight: '600',
-    color: '#333',
-  },
   description: {
     fontSize: 15,
-    color: '#555',
-    marginTop: 10,
+    color: '#555f61', // Gris más suave
+    lineHeight: 23,
+    textAlign: 'center', // O 'justify'
     marginBottom: 20,
-    lineHeight: 22,
-    textAlign: 'justify',
+  },
+  infoSection: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 15,
+  },
+  iconTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  iconStyle: {
+    fontSize: 18, // Tamaño del ícono (emoji)
+    marginRight: 10,
+    color: '#3498db', // Un color para los íconos
+  },
+  infoText: {
+    fontSize: 16,
+    color: '#34495e', // Gris oscuro para el texto de info
+    flexShrink: 1, // Para que el texto se ajuste si es muy largo
+  },
+  iconTextText: {
+    // Estilo adicional para el texto junto al ícono si es necesario
+    // Por ejemplo, si quieres diferenciarlo más
+  },
+
+  sectionContainer: {
+    backgroundColor: '#ffffff',
+    padding: 20,
+    marginHorizontal: 15,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111',
-    marginTop: 25,
-    marginBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    paddingBottom: 5,
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 18,
+    // borderBottomWidth: 1,
+    // borderBottomColor: '#e0e0e0',
+    // paddingBottom: 8,
   },
-  listItem: {
-    backgroundColor: '#fff',
+  cardItem: {
+    backgroundColor: '#f9f9f9', // Un fondo ligero para cada item de servicio
     padding: 15,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
-  listItemContent: {
+  cardItemTextContainer: {
     flex: 1,
+    marginRight: 10,
   },
-  listItemPriceContainer: {
-    alignItems: 'flex-end',
-    marginLeft: 10,
-  },
-  itemName: {
+  cardItemName: {
     fontSize: 17,
     fontWeight: '600',
     color: '#333',
   },
-  itemDescription: {
-    fontSize: 13,
-    color: '#777',
-    marginTop: 3,
+  cardItemDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
   itemPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#00796b', // Un color para el precio
+    color: '#27ae60', // Verde para el precio
   },
   itemDuration: {
-    fontSize: 12,
-    color: '#888',
+    fontSize: 13,
+    color: '#7f8c8d', // Gris para la duración
+    marginTop: 3,
+    textAlign: 'right',
   },
-  listItemBarber: {
-    backgroundColor: '#fff',
+
+  // Estilos para barberos
+  horizontalScroll: {
+    paddingVertical: 10,
+  },
+  barberCard: {
+    backgroundColor: '#fdfdfd',
+    borderRadius: 10,
     padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    flexDirection: 'row',
+    marginRight: 15,
     alignItems: 'center',
-    elevation: 1,
+    width: 140, // Ancho fijo para las tarjetas de barbero
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   barberAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 10,
     backgroundColor: '#e0e0e0',
   },
   avatarPlaceholder: {
+    // Reutilizado de la pantalla anterior
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarPlaceholderText: {
-    fontSize: 24,
-    color: '#aaa',
+  avatarPlaceholderTextBig: {
+    // Para el placeholder de barbero más grande
+    fontSize: 40,
+    color: '#bfbfbf',
   },
-  barberInfo: {
-    flex: 1,
+  barberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
   },
-  emptyText: {
-    fontSize: 15,
+  barberSpecialty: {
+    fontSize: 13,
     color: '#777',
     textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 20,
+  },
+
+  emptyText: {
+    fontSize: 15,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    paddingVertical: 20,
   },
   errorText: {
     fontSize: 16,
-    color: 'red',
+    color: '#e74c3c', // Rojo para errores
     textAlign: 'center',
   },
   bookButton: {
-    backgroundColor: '#000',
-    padding: 16,
-    borderRadius: 10,
+    backgroundColor: '#2c3e50', // Color primario oscuro
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 30,
+    marginHorizontal: 15,
+    marginTop: 10, // Reducido el margen superior
     marginBottom: 20,
+    elevation: 3,
   },
   bookButtonText: {
     color: '#fff',
