@@ -240,3 +240,10 @@ INSERT INTO Barberos (usuario_id, barberia_id, especialidad, descripcion_profesi
 SELECT b.*, u.name as nombre_barbero, u.avatar as avatar_barbero 
 FROM Barberos b
 JOIN users u ON b.usuario_id = u.id;
+
+
+______
+
+
+ALTER TABLE users
+ADD COLUMN forma_rostro VARCHAR(50) NULL;

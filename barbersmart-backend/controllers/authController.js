@@ -88,7 +88,7 @@ const login = async (req, res) => {
 const updateProfile = async (req, res) => {
   const {id} = req.params; // ID del usuario a actualizar
   // Campos que el frontend envía en el body JSON
-  const {name, email, avatar} = req.body;
+  const {name, email, avatar, telefono, forma_rostro} = req.body;
 
   console.log(
     `>>>>>>>>>>>>>> BACKEND: updateProfile - INICIO DE LA FUNCIÓN PARA ID: ${id} <<<<<<<<<<<<<<`,
@@ -125,7 +125,6 @@ const updateProfile = async (req, res) => {
     const values = [];
     let paramCount = 1;
 
-    // Construir dinámicamente la cláusula SET
     if (name !== undefined) {
       fieldsToUpdate.push(`name = $${paramCount++}`);
       values.push(name);
@@ -135,9 +134,16 @@ const updateProfile = async (req, res) => {
       values.push(email);
     }
     if (avatar !== undefined) {
-      // 'avatar' es la URL de ImgBB o null si se quiere borrar
       fieldsToUpdate.push(`avatar = $${paramCount++}`);
-      values.push(avatar); // Se guarda la URL directamente o null
+      values.push(avatar);
+    }
+    if (telefono !== undefined) {
+      fieldsToUpdate.push(`telefono = $${paramCount++}`);
+      values.push(telefono);
+    }
+    if (forma_rostro !== undefined) {
+      fieldsToUpdate.push(`forma_rostro = $${paramCount++}`);
+      values.push(forma_rostro);
     }
 
     // NOTA: NO estamos manejando 'password' aquí. Si se quisiera cambiar,
@@ -149,7 +155,7 @@ const updateProfile = async (req, res) => {
       );
       // Si no hay nada que actualizar, simplemente obtenemos y devolvemos el perfil actual
       const currentUserResult = await pool.query(
-        'SELECT id, name, email, avatar FROM users WHERE id = $1',
+        'SELECT id, name, email, avatar, telefono, forma_rostro FROM users WHERE id = $1',
         [id],
       );
       if (currentUserResult.rows.length === 0) {
@@ -221,7 +227,7 @@ const getProfile = async (req, res) => {
   );
   try {
     const result = await pool.query(
-      'SELECT id, name, email, avatar FROM users WHERE id = $1', // Asegúrate de incluir avatar
+      'SELECT id, name, email, avatar, telefono, forma_rostro FROM users WHERE id = $1', // Asegúrate de incluir avatar
       [id],
     );
     if (result.rows.length === 0) {
@@ -244,6 +250,6 @@ const getProfile = async (req, res) => {
 module.exports = {
   register,
   login,
-  updateProfile, // ✅ Asegúrate de tener la coma aquí
+  updateProfile,
   getProfile,
 };

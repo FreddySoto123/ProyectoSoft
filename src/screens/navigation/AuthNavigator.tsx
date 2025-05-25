@@ -13,6 +13,7 @@ import ProfileScreen from '../ProfileScreen'; // Ajusta la ruta
 import SelectBarbershopScreen from '../SelectBarbershopScreen'; // Ajusta la ruta
 import BarbershopDetailScreen from '../BarbershopDetailScreen'; // Ajusta la ruta
 import BarberProfileScreen from '../BarberProfileScreen'; // <--- IMPORTA LA NUEVA PANTALLA (Ajusta la ruta)
+import FaceShapeScreen from '../FaceShapeScreen';
 
 // Define tu RootStackParamList incluyendo TODAS las rutas y sus parámetros
 type RootStackParamList = {
@@ -24,8 +25,8 @@ type RootStackParamList = {
   Profile: {userId: string};
   SelectBarbershop: undefined;
   BarbershopDetail: {barbershopId: number | string; barbershopName: string};
-  BarberProfile: {barberUserId: number | string; barberName: string}; // <--- AÑADE LA NUEVA RUTA Y SUS PARÁMETROS
-  // Añade otras rutas que necesites aquí
+  BarberProfile: {barberUserId: number | string; barberName: string};
+  FaceShapeScreen: {userId: string; currentFaceShape?: string | null}; // Debe coincidir  // Añade otras rutas que necesites aquí
 };
 
 // Crea el Stack Navigator con el tipado
@@ -82,6 +83,11 @@ const AuthNavigator = () => (
         options={({route}) => ({
           title: route.params.barberName || 'Perfil del Barbero',
         })}
+      />
+      <Stack.Screen
+        name="FaceShapeScreen"
+        component={FaceShapeScreen}
+        options={{title: 'Forma de mi Rostro'}}
       />
     </Stack.Navigator>
   </NavigationContainer>
