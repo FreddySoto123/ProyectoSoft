@@ -247,3 +247,83 @@ ______
 
 ALTER TABLE users
 ADD COLUMN forma_rostro VARCHAR(50) NULL;
+
+
+______
+
+
+-- Conéctate a tu base de datos 'barbersmart'.
+
+-- Opcional: Eliminar la tabla si ya existe para empezar de cero
+DROP TABLE IF EXISTS Estilos_Corte CASCADE;
+
+-- Crear la tabla 'Estilos_Corte'
+CREATE TABLE Estilos_Corte (
+    id BIGSERIAL PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    descripcion TEXT,
+    foto_referencia_url VARCHAR(255), -- URL a la imagen del estilo de corte
+    tags_ia TEXT,                     -- Palabras clave para la IA, separadas por comas o similar
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Opcional: Crear un índice en 'nombre' si vas a buscar frecuentemente por nombre
+CREATE INDEX idx_estilos_corte_nombre ON Estilos_Corte(nombre);
+
+-- Trigger para 'updated_at'
+-- (Si ya creaste la función trigger_set_timestamp(), solo necesitas el TRIGGER)
+-- CREATE OR REPLACE FUNCTION trigger_set_timestamp() ... (si no existe)
+
+CREATE TRIGGER set_timestamp_estilos_corte
+BEFORE UPDATE ON Estilos_Corte
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+-- Verificar la creación
+-- En psql: \d Estilos_Corte
+
+
+______
+
+-- Insertar datos de ejemplo en la tabla Estilos_Corte
+INSERT INTO Estilos_Corte (nombre, descripcion, foto_referencia_url, tags_ia) VALUES
+(
+    'Fade Clásico', 
+    'Un degradado suave desde muy corto en los lados hasta más largo en la parte superior.',
+    'URL_DE_TU_IMAGEN_FADE_CLASICO.jpg', -- Ejemplo: https://i.ibb.co/XXXXX/fade_clasico.jpg
+    'fade, clasico, corto, hombre, degradado'
+),
+(
+    'Pompadour Moderno',
+    'Cabello largo en la parte superior, peinado hacia atrás con volumen, y lados más cortos.',
+    'URL_DE_TU_IMAGEN_POMPADOUR.jpg',   -- Ejemplo: https://i.ibb.co/XXXXX/pompadour.jpg
+    'pompadour, moderno, volumen, hombre, elegante'
+),
+(
+    'Buzz Cut',
+    'Corte muy corto y uniforme en toda la cabeza, realizado con máquina.',
+    'URL_DE_TU_IMAGEN_BUZZ_CUT.jpg',    -- Ejemplo: https://i.ibb.co/XXXXX/buzz_cut.jpg
+    'buzz cut, rapado, corto, hombre, militar'
+),
+(
+    'Texturizado Despeinado',
+    'Corte a capas con textura para un look casual y despeinado con movimiento.',
+    'URL_DE_TU_IMAGEN_TEXTURIZADO.jpg', -- Ejemplo: https://i.ibb.co/XXXXX/texturizado.jpg
+    'texturizado, despeinado, capas, hombre, casual'
+),
+(
+    'Undercut con Flequillo Largo',
+    'Lados rapados o muy cortos (undercut) con la parte superior y el flequillo significativamente más largos.',
+    'URL_DE_TU_IMAGEN_UNDERCUT.jpg',    -- Ejemplo: https://i.ibb.co/XXXXX/undercut_flequillo.jpg
+    'undercut, flequillo, moderno, hombre, contraste'
+),
+(
+    'Corte César',
+    'Un corte corto con un flequillo horizontal y recto, similar al estilo de Julio César.',
+    'URL_DE_TU_IMAGEN_CESAR.jpg',       -- Ejemplo: https://i.ibb.co/XXXXX/corte_cesar.jpg
+    'cesar, corto, flequillo, hombre, clasico'
+);
+
+-- Verificar los datos insertados
+SELECT * FROM Estilos_Corte;

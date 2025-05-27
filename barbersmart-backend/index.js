@@ -19,11 +19,15 @@ app.use(express.urlencoded({extended: true}));
 const authRoutes = require('./routes/auth');
 const barbershopRoutes = require('./routes/barbershopRoutes');
 const barberRoutes = require('./routes/barberRoutes');
+const styleRoutes = require('./routes/styleRoutes');
+const simulationRoutes = require('./routes/simulationRoutes');
 // Aquí importarías otros archivos de rutas (ej. appointmentRoutes, serviceRoutes, etc.)
 
 app.use('/api/auth', authRoutes); // Rutas para autenticación y perfil de usuario
 app.use('/api/barbershops', barbershopRoutes); // Rutas para barberías
 app.use('/api/barbers', barberRoutes); // Rutas para perfiles de barberos
+app.use('/api/styles', styleRoutes);
+app.use('/api/simulations', simulationRoutes);
 // app.use('/api/appointments', appointmentRoutes); // Ejemplo
 
 // RUTA DE PRUEBA DE CONEXIÓN A LA BASE DE DATOS Y ESTADO DEL SERVIDOR
