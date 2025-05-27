@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   captureButton: {
-    backgroundColor: 'rgba(0, 122, 255, 0.8)',
+    backgroundColor: 'rgba(0 0 0 / 0.8)',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
