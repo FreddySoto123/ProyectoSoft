@@ -1,21 +1,21 @@
-// AuthNavigator.tsx o como lo llames (ej. AppNavigator.tsx)
 import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
-// Importa TODAS tus pantallas
-import LoginScreen from '../LoginScreen'; // Ajusta la ruta si es '../screens/LoginScreen'
-import RegisterScreen from '../RegisterScreen'; // Ajusta la ruta
-import HomeScreen from '../HomeScreen'; // Ajusta la ruta
-import ServicesScreen from '../ServicesScreen'; // Ajusta la ruta
-import SimulationScreen from '../SimulationScreen'; // Ajusta la ruta
-import ProfileScreen from '../ProfileScreen'; // Ajusta la ruta
-import SelectBarbershopScreen from '../SelectBarbershopScreen'; // Ajusta la ruta
-import BarbershopDetailScreen from '../BarbershopDetailScreen'; // Ajusta la ruta
-import BarberProfileScreen from '../BarberProfileScreen'; // <--- IMPORTA LA NUEVA PANTALLA (Ajusta la ruta)
+import LoginScreen from '../LoginScreen';
+import RegisterScreen from '../RegisterScreen';
+import HomeScreen from '../HomeScreen';
+import ServicesScreen from '../ServicesScreen';
+import SimulationScreen from '../SimulationScreen';
+import ProfileScreen from '../ProfileScreen';
+import SelectBarbershopScreen from '../SelectBarbershopScreen';
+import BarbershopDetailScreen from '../BarbershopDetailScreen';
+import BarberProfileScreen from '../BarberProfileScreen';
 import FaceShapeScreen from '../FaceShapeScreen';
+import ImageCaptureScreen from '../simulation/ImageCaptureScreen';
+import HairstyleSelectionScreen from '../simulation/HairstyleSelectionScreen';
+import SimulationResultScreen from '../simulation/SimulationResultScreen';
 
-// Define tu RootStackParamList incluyendo TODAS las rutas y sus parámetros
 type RootStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -26,10 +26,17 @@ type RootStackParamList = {
   SelectBarbershop: undefined;
   BarbershopDetail: {barbershopId: number | string; barbershopName: string};
   BarberProfile: {barberUserId: number | string; barberName: string};
-  FaceShapeScreen: {userId: string; currentFaceShape?: string | null}; // Debe coincidir  // Añade otras rutas que necesites aquí
+  ImageCaptureScreen: {userId: string};
+  HairstyleSelectionScreen: {userId: string; userImageUri: string};
+  SimulationResultScreen: {
+    userId: string;
+    userImageUri: string;
+    hairstyleId: string | number;
+    hairstyleImageUri?: string;
+  };
+  FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
 };
 
-// Crea el Stack Navigator con el tipado
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AuthNavigator = () => (
@@ -88,6 +95,21 @@ const AuthNavigator = () => (
         name="FaceShapeScreen"
         component={FaceShapeScreen}
         options={{title: 'Forma de mi Rostro'}}
+      />
+      <Stack.Screen
+        name="ImageCaptureScreen"
+        component={ImageCaptureScreen}
+        options={{title: 'Simulación IA - Foto'}}
+      />
+      <Stack.Screen
+        name="HairstyleSelectionScreen"
+        component={HairstyleSelectionScreen}
+        options={{title: 'Simulación IA - Elegir Corte'}}
+      />
+      <Stack.Screen
+        name="SimulationResultScreen"
+        component={SimulationResultScreen}
+        options={{title: 'Simulación IA - Resultado'}}
       />
     </Stack.Navigator>
   </NavigationContainer>

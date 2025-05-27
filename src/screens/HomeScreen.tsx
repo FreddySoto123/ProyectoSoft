@@ -9,21 +9,19 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Platform, // Asegúrate de importar Platform
-  Alert, // Para el caso de error si no hay userId
+  Platform,
+  Alert,
 } from 'react-native';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
-// Define tus tipos de navegación
 type RootStackParamList = {
   Home: {userId: string; name: string};
   Profile: {userId: string};
   SelectBarbershop: undefined;
   AppointmentsScreen: undefined;
-  SimulationScreen: undefined;
-  FaceShapeScreen: {userId: string; currentFaceShape?: string | null}; // Parámetros definidos aquí
-  // ... otras rutas
+  ImageCaptureScreen: {userId: string};
+  FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
 };
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
@@ -35,12 +33,8 @@ type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute<HomeScreenRouteProp>();
-
-  // IMPORTANTE: Asegurarse de que `route.params` no sea undefined
-  // y que userId y name existan.
-  // Podrías querer manejar un caso donde no llegan, aunque no debería si la navegación a Home es correcta.
-  const userId = route.params?.userId; // Usar optional chaining
-  const name = route.params?.name; // Usar optional chaining
+  const userId = route.params?.userId;
+  const name = route.params?.name;
 
   const menuItems = [
     {
@@ -58,8 +52,8 @@ const HomeScreen: React.FC = () => {
     {
       id: '3',
       title: 'Simulación de cortes con IA',
-      screen: 'SimulationScreen',
       iconName: 'robot-happy-outline',
+      screen: 'ImageCaptureScreen',
     },
     {
       id: '4',
@@ -78,41 +72,29 @@ const HomeScreen: React.FC = () => {
       return;
     }
 
-    if (screenName === 'FaceShapeScreen') {
+    if (
+      screenName === 'FaceShapeScreen' ||
+      screenName === 'ImageCaptureScreen'
+    ) {
       if (userId) {
-        // Asegurarse de que tenemos el userId
-        // Aquí puedes obtener la currentFaceShape si la tienes en algún estado global o local
-        // Por ahora, la pasaré como null si no la tenemos fácilmente accesible aquí.
-        // Si la obtienes de una llamada a API o estado, la lógica iría aquí.
-        const userCurrentFaceShape = null; // Ejemplo: Reemplaza esto si tienes la forma actual
-
-        console.log('Navegando a FaceShapeScreen con params:', {
-          userId,
-          currentFaceShape: userCurrentFaceShape,
-        });
-        navigation.navigate('FaceShapeScreen', {
-          userId: userId,
-          currentFaceShape: userCurrentFaceShape,
-        });
+        let params: any = {userId};
+        if (screenName === 'FaceShapeScreen') {
+        }
+        console.log(`Navegando a ${screenName} con params:`, params);
+        navigation.navigate(screenName, params);
       } else {
         Alert.alert('Error', 'No se pudo identificar al usuario.');
         console.error(
-          'HomeScreen: userId es undefined, no se puede navegar a FaceShapeScreen con parámetros.',
+          `HomeScreen: userId es undefined, no se puede navegar a ${screenName} con parámetros.`,
         );
       }
     } else if (screenName === 'Profile') {
-      // Ejemplo si tuvieras "Mi Perfil" en menuItems
       if (userId) {
         navigation.navigate('Profile', {userId});
       } else {
         Alert.alert('Error', 'No se pudo identificar al usuario.');
       }
     } else {
-      // Para otras pantallas que no necesitan parámetros específicos o cuyos parámetros
-      // son opcionales y no se pasan desde aquí.
-      // La anotación @ts-ignore podría ser necesaria si TypeScript se queja de que no todas las
-      // rutas en RootStackParamList tienen exactamente los mismos parámetros o ninguno.
-      // @ts-ignore
       navigation.navigate(screenName);
     }
   };
