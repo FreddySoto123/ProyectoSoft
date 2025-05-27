@@ -1,5 +1,5 @@
 // screens/FaceShapeScreen.tsx
-import React, {useState, useEffect, useCallback} from 'react'; // Añadido useCallback
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -9,25 +9,25 @@ import {
   ScrollView,
   Alert,
   Platform,
-  Linking, // Importa Linking
-  AppState, // Importa AppState
-  ActivityIndicator, // Para un mejor feedback de carga
+  Linking,
+  AppState,
+  ActivityIndicator,
 } from 'react-native';
 import {
   Camera,
   useCameraDevices,
   CameraPermissionStatus,
   CameraDevice,
+  PhotoFile,
 } from 'react-native-vision-camera';
 import {
   useNavigation,
   useRoute,
   RouteProp,
   useIsFocused,
-} from '@react-navigation/native'; // Añadido useIsFocused
+} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
-// (Tipos FaceShapeScreenRouteParams y RootStackParamList permanecen igual)
 type FaceShapeScreenRouteParams = {
   userId: string;
   currentFaceShape?: string | null;
@@ -80,62 +80,48 @@ const FACE_SHAPES = [
   },
 ];
 
+// --- CONFIGURACIÓN DE APIs ---
+const IMGBB_API_KEY = '81fd551e66f3e290dce7e02e4f730eac'; // REEMPLAZA CON TU API KEY DE IMGBB
+const FACE_SHAPE_API_URL = 'http://localhost:5000/detect_face_shape'; // AJUSTA: IP de tu PC o localhost con adb reverse
+const FLASK_API_KEY =
+  'eyJzdWIiOiIxMjM0NTY4ODkwIiwibmFtZSI6IkpqaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ'; // La API Key de tu servidor Flask
+
 const FaceShapeScreen: React.FC = () => {
   const navigation = useNavigation<FaceShapeScreenNavigationProp>();
   const route = useRoute<FaceShapeScreenRouteProp>();
   const isFocused = useIsFocused();
 
   const userId = route.params?.userId;
-  const currentFaceShape = route.params?.currentFaceShape;
+  const currentFaceShapeFromParams = route.params?.currentFaceShape;
 
+  const camera = useRef<Camera>(null);
   const availableDevices: CameraDevice[] = useCameraDevices();
-
-  // Tu línea original
   const device = React.useMemo(() => {
-    console.log(
-      'FACE SHAPE SCREEN - Todos los dispositivos detectados por useCameraDevices():',
-      JSON.stringify(availableDevices, null, 2),
-    );
     if (!availableDevices || availableDevices.length === 0) return undefined;
-    const frontDevice = availableDevices.find(d => d.position === 'front');
-    console.log(
-      'FACE SHAPE SCREEN - Dispositivo frontal encontrado manualmente:',
-      frontDevice,
-    );
-    return frontDevice;
-  }, [availableDevices]); // Se recalcula solo si availableDevices cambia
+    return availableDevices.find(d => d.position === 'front');
+  }, [availableDevices]);
 
   const [cameraPermission, setCameraPermission] =
     useState<CameraPermissionStatus>('not-determined');
   const [selectedShape, setSelectedShape] = useState<string | null>(
-    currentFaceShape || null,
+    currentFaceShapeFromParams || null,
   );
+  const [isDetecting, setIsDetecting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Usamos useCallback para la función de permisos para evitar recreaciones innecesarias
   const requestCameraPermission = useCallback(async () => {
-    console.log(
-      'FACE SHAPE SCREEN - Verificando/Solicitando permiso de cámara...',
-    );
     let permission = await Camera.getCameraPermissionStatus();
-    console.log('FACE SHAPE SCREEN - Permiso de cámara actual:', permission);
-
     if (permission === 'not-determined') {
-      console.log('FACE SHAPE SCREEN - Permiso no determinado, solicitando...');
       permission = await Camera.requestCameraPermission();
-      console.log(
-        'FACE SHAPE SCREEN - Permiso después de solicitar:',
-        permission,
-      );
     }
-    setCameraPermission(permission); // Actualizar el estado del permiso
-
-    if (permission === 'denied' || permission === 'restricted') {
+    setCameraPermission(permission);
+    const isGranted = permission === 'granted';
+    if (!isGranted && permission !== 'not-determined') {
       Alert.alert(
         'Permiso de Cámara Requerido',
-        'BarberSmart necesita acceso a tu cámara para esta funcionalidad. Por favor, habilita el permiso en la configuración de la aplicación.',
+        'BarberSmart necesita acceso a tu cámara. Por favor, habilita el permiso en la configuración.',
         [
-          {text: 'Cancelar', style: 'cancel'},
+          {text: 'Cancelar'},
           {text: 'Abrir Configuración', onPress: () => Linking.openSettings()},
         ],
       );
@@ -143,43 +129,162 @@ const FaceShapeScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    requestCameraPermission(); // Solicitar al montar el componente
-
+    requestCameraPermission();
     const subscription = AppState.addEventListener('change', nextAppState => {
-      if (nextAppState === 'active') {
-        // Volver a verificar permisos cuando la app vuelve a primer plano
-        console.log('FACE SHAPE SCREEN - App activa, re-verificando permisos.');
-        requestCameraPermission();
-      }
+      if (nextAppState === 'active') requestCameraPermission();
     });
-
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, [requestCameraPermission]);
+
+  const handleTakePhoto = async () => {
+    if (camera.current == null) {
+      Alert.alert(
+        'Error',
+        'La cámara no está lista o no hay dispositivo frontal.',
+      );
+      setIsDetecting(false);
+      return;
+    }
+    console.log('FACE SHAPE SCREEN - Tomando foto...');
+    setIsDetecting(true);
+    try {
+      const photo = await camera.current.takePhoto({
+        qualityPrioritization: 'speed',
+        flash: 'off',
+        enableShutterSound: true,
+      });
+      console.log('FACE SHAPE SCREEN - Foto tomada, path:', photo.path);
+
+      // Subir a ImgBB
+      const imgbbFormData = new FormData();
+      imgbbFormData.append('key', IMGBB_API_KEY);
+      const uriParts = photo.path.split('.');
+      const fileType = uriParts[uriParts.length - 1] || 'jpg';
+      imgbbFormData.append('image', {
+        uri: `file://${photo.path}`,
+        name: `photo_for_shape_${Date.now()}.${fileType}`,
+        type: `image/${fileType === 'webp' ? 'webp' : 'jpeg'}`, // Ajustar tipo si es necesario
+      });
+
+      console.log('FACE SHAPE SCREEN - Subiendo a ImgBB...');
+      const imgbbResponse = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: imgbbFormData,
+      });
+      const imgbbData = await imgbbResponse.json();
+
+      if (imgbbResponse.ok && imgbbData.data && imgbbData.data.url) {
+        const imageUrlFromImgBB = imgbbData.data.url;
+        console.log(
+          'FACE SHAPE SCREEN - Foto subida a ImgBB:',
+          imageUrlFromImgBB,
+        );
+        await detectFaceShapeWithUrl(imageUrlFromImgBB);
+      } else {
+        console.error(
+          'FACE SHAPE SCREEN - Error al subir foto a ImgBB para detección:',
+          imgbbData,
+        );
+        Alert.alert(
+          'Error de Subida',
+          `No se pudo subir la imagen para análisis: ${
+            imgbbData.error?.message || 'Error ImgBB'
+          }`,
+        );
+        setIsDetecting(false);
+      }
+    } catch (error) {
+      console.error(
+        'FACE SHAPE SCREEN - Error en handleTakePhoto o subida a ImgBB:',
+        error,
+      );
+      Alert.alert('Error', 'Ocurrió un error al procesar la imagen.');
+      setIsDetecting(false);
+    }
+  };
+
+  const detectFaceShapeWithUrl = async (imageUrl: string) => {
+    console.log(
+      'FACE SHAPE SCREEN - Enviando URL a API Flask para detección:',
+      imageUrl,
+    );
+    try {
+      const response = await fetch(FACE_SHAPE_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${FLASK_API_KEY}`,
+        },
+        body: JSON.stringify({image_url: imageUrl}),
+      });
+      const data = await response.json();
+      console.log(
+        'FACE SHAPE SCREEN - Respuesta de la API de detección Flask:',
+        data,
+      );
+
+      if (response.ok && data.shape && data.status === 'success') {
+        const detectedShapeApi = data.shape.toLowerCase();
+        let detectedShapeId = detectedShapeApi
+          .replace(' face', '')
+          .replace('-shaped', '')
+          .replace(' shaped', '')
+          .trim();
+        if (detectedShapeId === 'long' || detectedShapeId === 'rectangle')
+          detectedShapeId = 'oblong';
+
+        const isValidShape = FACE_SHAPES.find(s => s.id === detectedShapeId);
+        if (isValidShape) {
+          setSelectedShape(detectedShapeId);
+          Alert.alert(
+            'Forma Detectada',
+            `Tu rostro parece ser de forma: ${isValidShape.name}.`,
+          );
+        } else {
+          Alert.alert(
+            'Detección Incierta',
+            'No se pudo determinar la forma de tu rostro o el tipo no es reconocido. Por favor, selecciónala manualmente.',
+          );
+          console.warn(
+            'Forma de rostro no reconocida/mapeada desde API Flask:',
+            data.shape,
+            'Normalizado a:',
+            detectedShapeId,
+          );
+        }
+      } else {
+        Alert.alert(
+          'Error de Detección',
+          data.message ||
+            data.error ||
+            `Respuesta inesperada de la API: ${response.status}`,
+        );
+      }
+    } catch (error) {
+      console.error(
+        'FACE SHAPE SCREEN - Error de red al contactar API de detección Flask:',
+        error,
+      );
+      Alert.alert(
+        'Error de Red',
+        'No se pudo conectar con el servicio de detección.',
+      );
+    } finally {
+      setIsDetecting(false);
+    }
+  };
 
   const handleSelectShape = (shapeId: string) => {
     setSelectedShape(shapeId);
   };
 
   const handleSaveChanges = async () => {
-    // ... (tu lógica de handleSaveChanges permanece igual, asegúrate que userId exista) ...
     if (!selectedShape) {
-      Alert.alert(
-        'Selección Requerida',
-        'Por favor, selecciona una forma de rostro.',
-      );
-      return;
+      /* ... */ return;
     }
     if (!userId) {
-      // Ya deberías tener userId de route.params
-      Alert.alert('Error de Usuario', 'No se pudo identificar al usuario.');
-      console.error(
-        'FACE SHAPE SCREEN - userId es undefined en handleSaveChanges',
-      );
-      return;
+      /* ... */ return;
     }
-
     setIsSaving(true);
     try {
       const response = await fetch(
@@ -207,7 +312,6 @@ const FaceShapeScreen: React.FC = () => {
     }
   };
 
-  // Estados de renderizado basados en permisos y dispositivo
   if (cameraPermission === 'not-determined') {
     return (
       <View style={styles.permissionContainer}>
@@ -224,8 +328,7 @@ const FaceShapeScreen: React.FC = () => {
       <View style={styles.permissionContainer}>
         <Text style={styles.permissionText}>Permiso de Cámara Denegado</Text>
         <Text style={styles.permissionSubText}>
-          Necesitas otorgar permiso a la cámara para usar esta función. Puedes
-          hacerlo desde la configuración de la aplicación.
+          Habilita el permiso en la configuración de la aplicación.
         </Text>
         <TouchableOpacity
           style={styles.settingsButton}
@@ -237,40 +340,56 @@ const FaceShapeScreen: React.FC = () => {
   }
 
   if (!device) {
-    // device puede ser null si no hay cámara frontal o hay un error al obtenerla
     return (
       <View style={styles.permissionContainer}>
         <Text style={styles.permissionText}>Cámara frontal no disponible.</Text>
-        <Text style={styles.permissionSubText}>
-          Asegúrate de que tu dispositivo tenga una cámara frontal y no esté
-          siendo usada por otra app.
-        </Text>
       </View>
     );
   }
 
-  // Renderizado principal con la cámara
   return (
     <View style={styles.container}>
-      {isFocused && device && cameraPermission === 'granted' ? ( // Renderizar Camera solo si la pantalla está enfocada y todo está listo
+      {isFocused ? (
         <Camera
+          ref={camera}
           style={StyleSheet.absoluteFill}
           device={device}
-          isActive={true} // isActive se maneja mejor con isFocused
+          isActive={true}
           photo={true}
-          // onError={(error) => console.error("Camera Error:", error)} // Añadir manejo de errores de cámara
+          onError={error => {
+            console.error('Error de Componente Camera:', error);
+            Alert.alert(
+              'Error de Cámara',
+              'Ocurrió un problema al iniciar la cámara.',
+            );
+          }}
         />
       ) : (
         <View style={styles.cameraPlaceholder}>
-          <Text>Activando cámara...</Text>
+          <ActivityIndicator size="small" color="#fff" />
+          <Text style={{color: '#fff', marginTop: 10}}>
+            Cámara en espera...
+          </Text>
         </View>
       )}
 
       <View style={styles.overlay}>
-        <Text style={styles.title}>Identifica tu Forma de Rostro</Text>
-        <Text style={styles.subtitle}>
-          Mírate en la cámara y selecciona la forma que más se parezca.
-        </Text>
+        <View style={styles.topSection}>
+          <Text style={styles.title}>Identifica tu Forma de Rostro</Text>
+          <TouchableOpacity
+            style={[styles.captureButton, isDetecting && styles.buttonDisabled]}
+            onPress={handleTakePhoto}
+            disabled={isDetecting || !isFocused}>
+            {isDetecting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.captureButtonText}>Analizar mi Rostro</Text>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.subtitle}>
+            O selecciona la forma que más se parezca:
+          </Text>
+        </View>
 
         <View style={styles.shapeOverlayContainer}>
           {selectedShape && FACE_SHAPES.find(s => s.id === selectedShape) && (
@@ -282,161 +401,193 @@ const FaceShapeScreen: React.FC = () => {
           )}
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.shapesScrollView}
-          contentContainerStyle={styles.shapesContainer}>
-          {FACE_SHAPES.map(shape => (
-            <TouchableOpacity
-              key={shape.id}
-              style={[
-                styles.shapeButton,
-                selectedShape === shape.id && styles.shapeButtonSelected,
-              ]}
-              onPress={() => handleSelectShape(shape.id)}>
-              <Image
-                source={shape.iconUri}
-                style={styles.shapeIcon}
-                resizeMode="contain"
-              />
-              <Text
+        <View style={styles.bottomSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.shapesScrollView}
+            contentContainerStyle={styles.shapesContainer}>
+            {FACE_SHAPES.map(shape => (
+              <TouchableOpacity
+                key={shape.id}
                 style={[
-                  styles.shapeText,
-                  selectedShape === shape.id && styles.shapeTextSelected,
-                ]}>
-                {shape.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                  styles.shapeButton,
+                  selectedShape === shape.id && styles.shapeButtonSelected,
+                ]}
+                onPress={() => handleSelectShape(shape.id)}>
+                <Image
+                  source={shape.iconUri}
+                  style={styles.shapeIcon}
+                  resizeMode="contain"
+                />
+                <Text
+                  style={[
+                    styles.shapeText,
+                    selectedShape === shape.id && styles.shapeTextSelected,
+                  ]}>
+                  {shape.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-        <TouchableOpacity
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-          onPress={handleSaveChanges}
-          disabled={isSaving || !selectedShape}>
-          <Text style={styles.saveButtonText}>
-            {isSaving ? 'Guardando...' : 'Guardar Forma'}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              (isSaving || !selectedShape) && styles.saveButtonDisabled,
+            ]}
+            onPress={handleSaveChanges}
+            disabled={isSaving || !selectedShape}>
+            <Text style={styles.saveButtonText}>
+              {isSaving ? 'Guardando...' : 'Guardar Forma'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  // ... (tus estilos que ya tenías) ...
-  // Asegúrate de tener estos estilos para los nuevos estados de permiso/carga:
   container: {
     flex: 1,
     backgroundColor: 'black',
   },
   cameraPlaceholder: {
-    // Para mostrar mientras la cámara se activa
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#333',
+    backgroundColor: '#222',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Platform.OS === 'ios' ? 60 : 40, // Ajuste para safe area
+    paddingVertical: Platform.OS === 'ios' ? 50 : 25,
     paddingHorizontal: 10,
   },
+  topSection: {
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 10,
+  },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
+    marginBottom: 12,
+  },
+  captureButton: {
+    backgroundColor: 'rgba(0, 122, 255, 0.8)',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    marginBottom: 12,
+    minWidth: 180,
+    alignItems: 'center',
+  },
+  buttonDisabled: {
+    // Estilo para botones deshabilitados
+    backgroundColor: 'rgba(128, 128, 128, 0.7)', // Gris semitransparente
+  },
+  captureButtonText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '600',
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 20,
+    marginBottom: 10,
+    paddingHorizontal: 15,
   },
   shapeOverlayContainer: {
-    width: 200,
-    height: 280,
+    width: 160,
+    height: 220,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 'auto',
-    marginTop: 20,
+    flex: 1,
+    maxHeight: '35%',
+    marginVertical: 10,
   },
   selectedShapeImage: {
     width: '100%',
     height: '100%',
-    opacity: 0.5, // Más sutil
+    opacity: 0.4,
+  },
+  bottomSection: {
+    width: '100%',
+    alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
   },
   shapesScrollView: {
-    maxHeight: 150,
+    maxHeight: 120,
     width: '100%',
-    paddingVertical: 10,
-    flexGrow: 0, // Evitar que el ScrollView crezca demasiado si hay pocas formas
+    paddingVertical: 5,
+    flexGrow: 0,
   },
   shapesContainer: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 5,
     alignItems: 'center',
-    justifyContent: 'center', // Centrar las formas si son pocas
+    justifyContent: 'center',
   },
   shapeButton: {
     alignItems: 'center',
-    marginHorizontal: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 10,
+    marginHorizontal: 4,
+    padding: 6,
+    borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    width: 100,
+    borderColor: 'rgba(255,255,255,0.25)',
+    width: 80,
   },
   shapeButtonSelected: {
-    backgroundColor: 'rgba(0, 122, 255, 0.8)',
-    borderColor: '#007AFF',
+    backgroundColor: 'rgba(0, 122, 255, 0.7)',
+    borderColor: 'rgba(0, 122, 255, 0.9)',
   },
   shapeIcon: {
-    width: 50, // Reducido para que quepa mejor el texto
-    height: 70,
-    marginBottom: 3,
+    width: 40,
+    height: 60,
+    marginBottom: 2,
   },
   shapeText: {
-    color: 'white',
-    fontSize: 12, // Más pequeño para que no se corte
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 10,
     textAlign: 'center',
   },
   shapeTextSelected: {
     fontWeight: 'bold',
+    color: 'white',
   },
   saveButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 15,
+    paddingVertical: 14,
     paddingHorizontal: 30,
     borderRadius: 25,
-    width: '90%', // Más ancho
+    width: '85%',
     alignItems: 'center',
-    marginTop: 15,
+    marginTop: 10,
   },
   saveButtonDisabled: {
-    backgroundColor: '#555', // Un gris más oscuro para deshabilitado
+    backgroundColor: '#444',
   },
   saveButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
   },
   permissionContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 30, // Más padding
-    backgroundColor: '#e9e9ef', // Un color de fondo diferente para estas pantallas
+    padding: 30,
+    backgroundColor: '#e9e9ef',
   },
   permissionText: {
-    fontSize: 20, // Más grande
+    fontSize: 20,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 15,
@@ -451,7 +602,6 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   settingsButton: {
-    // Estilo para el botón de abrir configuración
     backgroundColor: '#007AFF',
     paddingVertical: 12,
     paddingHorizontal: 25,
