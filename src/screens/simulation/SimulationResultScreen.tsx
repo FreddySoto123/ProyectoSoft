@@ -218,16 +218,16 @@ const SimulationResultScreen: React.FC = () => {
         disabled={!generatedImage}>
         <Text style={styles.buttonText}>Guardar Imagen</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.secondaryButton}
         onPress={() => navigation.goBack()}>
         <Text style={styles.secondaryButtonText}>Probar Otro Estilo</Text>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.secondaryButton}
-        onPress={() => navigation.popToTop()}>
-        {' '}
-        {/* O a la pantalla de inicio de simulación */}
+        onPress={() => navigation.navigate('ImageCaptureScreen', { userId: userId })}>
         <Text style={styles.secondaryButtonText}>Nueva Simulación</Text>
       </TouchableOpacity>
     </ScrollView>
