@@ -1,0 +1,329 @@
+-- Conéctate a tu base de datos 'barbersmart' antes de ejecutar esto.
+-- En psql: \c barbersmart
+-- En pgAdmin: Abre un Query Tool para la base de datos 'barbersmart'.
+
+-- Opcional: Eliminar la tabla si ya existe para empezar de cero (útil en desarrollo)
+DROP TABLE IF EXISTS Barberias CASCADE;
+
+-- Crear la tabla 'Barberias'
+CREATE TABLE Barberias (
+    id BIGSERIAL PRIMARY KEY,                       -- ID único autoincremental (BIGSERIAL si esperas muchas barberías)
+    nombre VARCHAR(255) NOT NULL,                   -- Nombre de la barbería
+    direccion TEXT,                                 -- Dirección (TEXT es similar a nvarchar(max))
+    telefono_contacto VARCHAR(50),                  -- Teléfono de contacto de la barbería
+    email_contacto VARCHAR(255),                    -- Email de contacto de la barbería
+    descripcion TEXT,                               -- Descripción de la barbería
+    logo_url VARCHAR(255),                          -- URL del logo
+    horario_apertura TIME,                          -- Hora de apertura general
+    horario_cierre TIME,                            -- Hora de cierre general
+    dias_laborales VARCHAR(100),                    -- Ej: "Lunes-Sábado", "L,M,X,J,V", etc.
+    administrador_id BIGINT NOT NULL,               -- FK al usuario administrador principal
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, -- Fecha y hora de creación
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, -- Fecha y hora de la última actualización
+
+    CONSTRAINT fk_administrador_usuario
+        FOREIGN KEY(administrador_id) 
+        REFERENCES Usuarios(id)
+        ON DELETE RESTRICT -- O SET NULL, o CASCADE dependiendo de tu lógica de negocio
+        ON UPDATE CASCADE
+);
+
+-- Crear un índice en administrador_id para mejorar el rendimiento de las búsquedas por administrador
+CREATE INDEX idx_barberias_administrador_id ON Barberias(administrador_id);
+
+-- Opcional: Crear una función y un trigger para actualizar automáticamente 'updated_at'
+-- (Si ya creaste esta función para la tabla 'users', no necesitas volver a crear la FUNCIÓN, solo el TRIGGER)
+CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_timestamp_barberias
+BEFORE UPDATE ON Barberias
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+-- Comentarios:
+-- BIGSERIAL: Es un tipo de dato autoincremental de 8 bytes, adecuado para IDs que pueden crecer mucho. SERIAL es de 4 bytes.
+-- TEXT: Para campos de texto largos como dirección y descripción.
+-- VARCHAR(255): Longitud común para nombres, emails, URLs.
+-- TIME: Para almacenar solo la hora.
+-- TIMESTAMPTZ: Timestamp con zona horaria, recomendado para created_at y updated_at.
+-- CONSTRAINT fk_administrador_usuario: Define la llave foránea.
+-- ON DELETE RESTRICT: Impide eliminar un usuario si es administrador de una barbería. Podrías cambiarlo a:
+--   ON DELETE SET NULL: Si el usuario se elimina, administrador_id se pone a NULL (necesitarías que la columna permita NULLs).
+--   ON DELETE CASCADE: Si el usuario se elimina, la barbería también se elimina (¡peligroso!).
+
+
+
+______
+
+
+
+
+-- Conéctate a tu base de datos 'barbersmart'.
+
+-- Asegúrate de que exista un usuario con id=1 (o el id que vayas a usar) en la tabla Usuarios.
+-- Si no, inserta uno primero:
+-- INSERT INTO Usuarios (nombre, email, password, telefono, rol) VALUES ('Admin Principal', 'admin@barbersmart.com', 'hash_de_contraseña_segura', '123456789', 'Administrador');
+-- (Luego tendrías que obtener el ID de este usuario insertado para usarlo abajo)
+
+-- Insertar datos de ejemplo en la tabla Barberias
+INSERT INTO Barberias (nombre, direccion, telefono_contacto, email_contacto, descripcion, logo_url, horario_apertura, horario_cierre, dias_laborales, administrador_id) VALUES
+(
+    'Barbería El Filo Dorado',
+    'Calle Falsa 123, Ciudad Ejemplo',
+    '555-1234',
+    'contacto@filodorado.com',
+    'La mejor barbería de la ciudad, especialistas en cortes clásicos y modernos.',
+    'https://i.ibb.co/mCxQ5Q0/barbershop-logo1.png', -- Reemplaza con una URL de logo real o déjalo NULL
+    '09:00:00',
+    '20:00:00',
+    'Lunes-Sábado',
+    1 -- Asumiendo que el usuario con id=1 es el administrador
+),
+(
+    'Urban Cuts & Shaves',
+    'Avenida Siempre Viva 742, Distrito Central',
+    '555-5678',
+    'info@urbancuts.com',
+    'Estilo urbano y las últimas tendencias en barbería. Ambiente relajado.',
+    'https://i.ibb.co/StXG9T1/barbershop-logo2.png', -- Reemplaza con una URL de logo real o déjalo NULL
+    '10:00:00',
+    '21:00:00',
+    'Martes-Domingo',
+    1 -- Puedes tener el mismo administrador o diferentes si tienes más usuarios admin
+),
+(
+    'La Navaja Precisa',
+    'Plaza Mayor, Local 3B, Casco Antiguo',
+    '555-8765',
+    'reservas@navajaprecisa.com',
+    'Tradición y precisión en cada corte. Afeitados con navaja de alta calidad.',
+    NULL, -- Ejemplo sin logo
+    '08:30:00',
+    '19:00:00',
+    'Lunes-Viernes',
+    1 -- Asumiendo que el usuario con id=1 es el administrador
+);
+
+-- Verificar los datos insertados
+SELECT * FROM Barberias;
+
+
+
+____________
+
+
+-- Conéctate a tu base de datos 'barbersmart'.
+
+DROP TABLE IF EXISTS Servicios CASCADE;
+
+CREATE TABLE Servicios (
+    id BIGSERIAL PRIMARY KEY,
+    barberia_id BIGINT NOT NULL,
+    nombre VARCHAR(255) NOT NULL,
+    descripcion TEXT,
+    duracion_estimada_minutos INT NOT NULL,
+    precio DECIMAL(10,2) NOT NULL,
+    categoria VARCHAR(100),
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_servicio_barberia
+        FOREIGN KEY(barberia_id) 
+        REFERENCES Barberias(id)
+        ON DELETE CASCADE -- Si se borra la barbería, se borran sus servicios
+        ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_servicios_barberia_id ON Servicios(barberia_id);
+
+CREATE TRIGGER set_timestamp_servicios
+BEFORE UPDATE ON Servicios
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp(); -- Asumiendo que la función trigger_set_timestamp() ya existe
+
+_________________
+
+
+INSERT INTO Servicios (barberia_id, nombre, descripcion, duracion_estimada_minutos, precio, categoria) VALUES
+-- Servicios para Barbería El Filo Dorado (ID=1)
+(1, 'Corte Clásico Caballero', 'Corte tradicional con máquina y tijera, incluye lavado y peinado.', 45, 25.00, 'Corte'),
+(1, 'Afeitado Clásico con Navaja', 'Afeitado completo con toallas calientes, espuma y navaja.', 30, 20.00, 'Barba'),
+(1, 'Arreglo de Barba', 'Perfilado y arreglo de barba con productos de calidad.', 20, 15.00, 'Barba'),
+(1, 'Corte Infantil', 'Corte para niños hasta 12 años.', 30, 18.00, 'Corte'),
+
+-- Servicios para Urban Cuts & Shaves (ID=2)
+(2, 'Corte Moderno / Fade', 'Corte con degradado (fade) y diseño a elección.', 60, 35.00, 'Corte'),
+(2, 'Diseño de Barba Premium', 'Diseño, arreglo y tratamiento de barba con aceites esenciales.', 40, 30.00, 'Barba'),
+(2, 'Tratamiento Capilar Revitalizante', 'Masaje y aplicación de productos para fortalecer el cabello.', 30, 25.00, 'Tratamiento'),
+
+-- Servicios para La Navaja Precisa (ID=3)
+(3, 'Corte a Tijera Exclusivo', 'Corte realizado íntegramente a tijera para un acabado perfecto.', 60, 40.00, 'Corte'),
+(3, 'Afeitado Ritual "La Navaja"', 'Experiencia completa de afeitado de lujo con múltiples pasos.', 60, 50.00, 'Barba'),
+(3, 'Tinte de Cabello o Barba', 'Coloración profesional para cabello o barba.', 45, 30.00, 'Color');
+
+SELECT * FROM Servicios;
+
+____________
+
+-- Conéctate a tu base de datos 'barbersmart'.
+
+DROP TABLE IF EXISTS Barberos CASCADE;
+
+CREATE TABLE Barberos (
+    id BIGSERIAL PRIMARY KEY,
+    usuario_id BIGINT UNIQUE NOT NULL, -- Un usuario solo puede ser un barbero una vez (en esta tabla)
+    barberia_id BIGINT NOT NULL,
+    especialidad VARCHAR(255),
+    descripcion_profesional TEXT,
+    calificacion_promedio DECIMAL(3,2) DEFAULT 0.00,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_barbero_usuario
+        FOREIGN KEY(usuario_id) 
+        REFERENCES users(id) -- Referencia a la tabla 'users'
+        ON DELETE CASCADE -- Si se elimina el usuario, se elimina su registro de barbero
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_barbero_barberia
+        FOREIGN KEY(barberia_id) 
+        REFERENCES Barberias(id)
+        ON DELETE CASCADE -- Si se elimina la barbería, se eliminan sus barberos asociados
+        ON UPDATE CASCADE
+);
+
+CREATE INDEX idx_barberos_usuario_id ON Barberos(usuario_id);
+CREATE INDEX idx_barberos_barberia_id ON Barberos(barberia_id);
+
+CREATE TRIGGER set_timestamp_barberos
+BEFORE UPDATE ON Barberos
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp(); -- Asumiendo que la función trigger_set_timestamp() ya existe
+
+
+_____________________
+
+-- Primero, inserta usuarios con rol 'Barbero' en la tabla 'users'
+-- ¡ASEGÚRATE DE USAR CONTRASEÑAS HASHEADAS REALES SI ESTO FUERA PRODUCCIÓN!
+-- Para el ejemplo, usaré placeholders para la contraseña.
+INSERT INTO users (name, email, password, telefono, rol, avatar) VALUES
+('Carlos "El Mago" López', 'carlos.barbero@email.com', 'hashed_password1', '5550001', 'Barbero', 'https://static.vecteezy.com/system/resources/previews/051/479/957/non_2x/gentleman-barber-shop-brand-logo-vector.jpg'),
+('Sofía "La Estilista" Ramirez', 'sofia.barbera@email.com', 'hashed_password2', '5550002', 'Barbero', 'https://i.pinimg.com/736x/da/48/66/da48667dd2728b5be02d836e8c7c9c92.jpg'),
+('Miguel "Precisión" Torres', 'miguel.barbero@email.com', 'hashed_password3', '5550003', 'Barbero', 'https://www.shutterstock.com/image-vector/gentleman-barber-shop-illustration-600w-656836888.jpg');
+
+-- Asumamos que estos usuarios obtuvieron los IDs:
+-- Carlos: ID 2 (si el Admin era ID 1)
+-- Sofía: ID 3
+-- Miguel: ID 4
+-- ¡VERIFICA ESTOS IDs DESPUÉS DE LA INSERCIÓN con SELECT id, nombre, rol FROM users WHERE rol='Barbero';!
+
+-- Ahora, inserta en la tabla Barberos, usando los IDs de usuario y barbería correctos
+-- Asumamos que Carlos (ID 2) y Sofía (ID 3) trabajan en Barbería El Filo Dorado (ID=1)
+-- Y Miguel (ID 4) trabaja en Urban Cuts & Shaves (ID=2)
+INSERT INTO Barberos (usuario_id, barberia_id, especialidad, descripcion_profesional) VALUES
+(2, 1, 'Cortes Clásicos y Fades', 'Más de 10 años de experiencia, apasionado por la barbería tradicional y moderna.'),
+(3, 1, 'Colorimetría y Estilo Femenino/Masculino', 'Especialista en tendencias de color y cortes que resaltan tu personalidad.'),
+(4, 2, 'Diseños Tribales y Urbanos, Afeitado Detallado', 'Creativo y meticuloso, transformo tu cabello y barba en una obra de arte.');
+
+-- Miguel (ID 4) también podría trabajar en La Navaja Precisa (ID=3) si un barbero puede estar en varias (tu esquema actual no lo impide directamente en Barberos, pero un usuario es un barbero único)
+-- Si un barbero SÓLO puede estar en UNA barbería, el modelo está bien.
+-- Si un barbero puede trabajar en MÚLTIPLES barberías, necesitarías una tabla de unión (ej. Barberias_Barberos_Link).
+-- Por ahora, el modelo asume que un 'Barbero' (como entidad en la tabla Barberos) está asociado a una 'barberia_id'.
+
+SELECT b.*, u.name as nombre_barbero, u.avatar as avatar_barbero 
+FROM Barberos b
+JOIN users u ON b.usuario_id = u.id;
+
+
+______
+
+
+ALTER TABLE users
+ADD COLUMN forma_rostro VARCHAR(50) NULL;
+
+
+______
+
+
+-- Conéctate a tu base de datos 'barbersmart'.
+
+-- Opcional: Eliminar la tabla si ya existe para empezar de cero
+DROP TABLE IF EXISTS Estilos_Corte CASCADE;
+
+-- Crear la tabla 'Estilos_Corte'
+CREATE TABLE Estilos_Corte (
+    id BIGSERIAL PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    descripcion TEXT,
+    foto_referencia_url VARCHAR(255), -- URL a la imagen del estilo de corte
+    tags_ia TEXT,                     -- Palabras clave para la IA, separadas por comas o similar
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Opcional: Crear un índice en 'nombre' si vas a buscar frecuentemente por nombre
+CREATE INDEX idx_estilos_corte_nombre ON Estilos_Corte(nombre);
+
+-- Trigger para 'updated_at'
+-- (Si ya creaste la función trigger_set_timestamp(), solo necesitas el TRIGGER)
+-- CREATE OR REPLACE FUNCTION trigger_set_timestamp() ... (si no existe)
+
+CREATE TRIGGER set_timestamp_estilos_corte
+BEFORE UPDATE ON Estilos_Corte
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+-- Verificar la creación
+-- En psql: \d Estilos_Corte
+
+
+______
+
+-- Insertar datos de ejemplo en la tabla Estilos_Corte
+INSERT INTO Estilos_Corte (nombre, descripcion, foto_referencia_url, tags_ia) VALUES
+(
+    'Fade Clásico', 
+    'Un degradado suave desde muy corto en los lados hasta más largo en la parte superior.',
+    'URL_DE_TU_IMAGEN_FADE_CLASICO.jpg', -- Ejemplo: https://i.ibb.co/XXXXX/fade_clasico.jpg
+    'fade, clasico, corto, hombre, degradado'
+),
+(
+    'Pompadour Moderno',
+    'Cabello largo en la parte superior, peinado hacia atrás con volumen, y lados más cortos.',
+    'URL_DE_TU_IMAGEN_POMPADOUR.jpg',   -- Ejemplo: https://i.ibb.co/XXXXX/pompadour.jpg
+    'pompadour, moderno, volumen, hombre, elegante'
+),
+(
+    'Buzz Cut',
+    'Corte muy corto y uniforme en toda la cabeza, realizado con máquina.',
+    'URL_DE_TU_IMAGEN_BUZZ_CUT.jpg',    -- Ejemplo: https://i.ibb.co/XXXXX/buzz_cut.jpg
+    'buzz cut, rapado, corto, hombre, militar'
+),
+(
+    'Texturizado Despeinado',
+    'Corte a capas con textura para un look casual y despeinado con movimiento.',
+    'URL_DE_TU_IMAGEN_TEXTURIZADO.jpg', -- Ejemplo: https://i.ibb.co/XXXXX/texturizado.jpg
+    'texturizado, despeinado, capas, hombre, casual'
+),
+(
+    'Undercut con Flequillo Largo',
+    'Lados rapados o muy cortos (undercut) con la parte superior y el flequillo significativamente más largos.',
+    'URL_DE_TU_IMAGEN_UNDERCUT.jpg',    -- Ejemplo: https://i.ibb.co/XXXXX/undercut_flequillo.jpg
+    'undercut, flequillo, moderno, hombre, contraste'
+),
+(
+    'Corte César',
+    'Un corte corto con un flequillo horizontal y recto, similar al estilo de Julio César.',
+    'URL_DE_TU_IMAGEN_CESAR.jpg',       -- Ejemplo: https://i.ibb.co/XXXXX/corte_cesar.jpg
+    'cesar, corto, flequillo, hombre, clasico'
+);
+
+-- Verificar los datos insertados
+SELECT * FROM Estilos_Corte;
