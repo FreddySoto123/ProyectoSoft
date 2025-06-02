@@ -141,3 +141,12 @@ dist
 /android/build/
 *.apk
 *.aab
+android/.gradle/
+android/gradle/
+android/app/src/main/assets/index.android.bundle
+android/app/src/main/res/drawable-*/
+android/app.iml
+android/.idea/
+android/local.properties
+android/gradlew
+android/gradlew.bat
