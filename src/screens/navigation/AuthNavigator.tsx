@@ -15,6 +15,8 @@ import FaceShapeScreen from '../FaceShapeScreen';
 import ImageCaptureScreen from '../simulation/ImageCaptureScreen';
 import HairstyleSelectionScreen from '../simulation/HairstyleSelectionScreen';
 import SimulationResultScreen from '../simulation/SimulationResultScreen';
+import AppointmentDetailScreen from '../AppointmentDetailScreen';
+import BarberAppointmentDetailScreen from '../BarberAppointmentDetailScreen';
 
 type RootStackParamList = {
   Login: undefined;
@@ -35,6 +37,10 @@ type RootStackParamList = {
     hairstyleImageUri?: string;
   };
   FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
+  AppointmentList: {userId: string};
+  BarberAppointmentList: {barberUserId: string};
+  AppointmentDetail: {cita: CitaConDetalles};
+  BarberAppointmentDetail: {cita: CitaParaBarbero; onGoBack?: () => void};
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -110,6 +116,16 @@ const AuthNavigator = () => (
         name="SimulationResultScreen"
         component={SimulationResultScreen}
         options={{title: 'Simulación IA - Resultado'}}
+      />
+      <Stack.Screen
+        name="AppointmentDetail"
+        component={AppointmentDetailScreen}
+        options={{title: 'Detalle de Cita'}}
+      />
+      <Stack.Screen
+        name="BarberAppointmentDetail"
+        component={BarberAppointmentDetailScreen}
+        options={{title: 'Gestionar Cita'}}
       />
     </Stack.Navigator>
   </NavigationContainer>
