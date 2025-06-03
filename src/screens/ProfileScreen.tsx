@@ -37,7 +37,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({route}) => {
       console.log(`PROFILE SCREEN - Fetching profile for userId: ${userId}`);
       try {
         const response = await fetch(
-          `http://localhost:3001/api/auth/profile/${userId}`,
+          `http://192.168.1.202:3001/api/auth/profile/${userId}`,
         );
         const data = await response.json();
         console.log('PROFILE SCREEN - Datos recibidos de fetchProfile:', data);

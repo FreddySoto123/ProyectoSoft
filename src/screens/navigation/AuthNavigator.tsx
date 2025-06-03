@@ -2,6 +2,7 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
+// ... (tus otras importaciones de pantallas) ...
 import LoginScreen from '../LoginScreen';
 import RegisterScreen from '../RegisterScreen';
 import HomeScreen from '../HomeScreen';
@@ -15,8 +16,10 @@ import FaceShapeScreen from '../FaceShapeScreen';
 import ImageCaptureScreen from '../simulation/ImageCaptureScreen';
 import HairstyleSelectionScreen from '../simulation/HairstyleSelectionScreen';
 import SimulationResultScreen from '../simulation/SimulationResultScreen';
-
-type RootStackParamList = {
+import CitaScreen from '../CitaScreen'; // Asegúrate que la importación es correcta
+import AppointmentsScreen from '../AppointmentsScreen';
+// Define tu RootStackParamList
+export type RootStackParamList = { // Exporta el tipo si lo usas en otros archivos
   Login: undefined;
   Register: undefined;
   Home: {userId: string; name: string};
@@ -35,6 +38,11 @@ type RootStackParamList = {
     hairstyleImageUri?: string;
   };
   FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
+  CitaScreen: { // El nombre aquí es 'CitaScreen'
+    barberiaId: number;
+    barberoId: number;
+    user: {id: number; nombre: string /* Ajusta el tipo de user según lo que pases */};
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -111,6 +119,16 @@ const AuthNavigator = () => (
         component={SimulationResultScreen}
         options={{title: 'Simulación IA - Resultado'}}
       />
+      <Stack.Screen
+        name="CitaScreen" // <--- CORREGIDO AQUÍ
+        component={CitaScreen}
+        options={{title: 'Reservar Cita'}}
+      />
+      <Stack.Screen
+  name="AppointmentsScreen"
+  component={AppointmentsScreen}
+  options={{ title: 'Mis Citas' }}
+/>
     </Stack.Navigator>
   </NavigationContainer>
 );

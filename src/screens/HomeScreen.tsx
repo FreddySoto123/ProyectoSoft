@@ -19,8 +19,10 @@ type RootStackParamList = {
   Home: {userId: string; name: string};
   Profile: {userId: string};
   SelectBarbershop: undefined;
-  AppointmentsScreen: undefined;
+  AppointmentsScreen: undefined; // Consider if this is still needed or if 'Citas' always goes to CitaScreen
   ImageCaptureScreen: {userId: string};
+  // Change 'Cita' to 'CitaScreen' and ensure params match what's being sent
+  CitaScreen: {user: {id: number; name: string; photo_url: string;};};
   FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
 };
 
@@ -38,17 +40,17 @@ const HomeScreen: React.FC = () => {
 
   const menuItems = [
     {
-      id: '1',
-      title: 'Encuentra tu Barbería',
-      screen: 'SelectBarbershop',
-      iconName: 'store-search-outline',
-    },
-    {
-      id: '2',
-      title: 'Citas',
-      screen: 'AppointmentsScreen',
-      iconName: 'calendar-check-outline',
-    },
+    id: '1',
+    title: 'Agendar una Cita',
+    screen: 'SelectBarbershop', // Ahora va al paso 1
+    iconName: 'store-search-outline',
+  },
+  {
+    id: '2',
+    title: 'Mis Citas',
+    screen: 'AppointmentsScreen', // Esto será para el historial
+    iconName: 'calendar-check-outline',
+  },
     {
       id: '3',
       title: 'Simulación de cortes con IA',
@@ -63,42 +65,54 @@ const HomeScreen: React.FC = () => {
     },
   ];
 
-  const handleMenuItemPress = (
-    screenName: keyof RootStackParamList | undefined,
-    itemTitle: string,
-  ) => {
-    if (!screenName) {
-      console.log(`${itemTitle} presionado (sin pantalla definida)`);
-      return;
-    }
+ const handleMenuItemPress = (
+  screenName: keyof RootStackParamList | undefined,
+  itemTitle: string,
+) => {
+  if (!screenName) {
+    console.log(`${itemTitle} presionado (sin pantalla definida)`);
+    return;
+  }
 
-    if (
-      screenName === 'FaceShapeScreen' ||
-      screenName === 'ImageCaptureScreen'
-    ) {
-      if (userId) {
-        let params: any = {userId};
-        if (screenName === 'FaceShapeScreen') {
-        }
-        console.log(`Navegando a ${screenName} con params:`, params);
-        navigation.navigate(screenName, params);
-      } else {
-        Alert.alert('Error', 'No se pudo identificar al usuario.');
-        console.error(
-          `HomeScreen: userId es undefined, no se puede navegar a ${screenName} con parámetros.`,
-        );
+  if (
+    screenName === 'FaceShapeScreen' ||
+    screenName === 'ImageCaptureScreen'
+  ) {
+    if (userId) {
+      let params: any = {userId};
+      if (screenName === 'FaceShapeScreen') {
       }
-    } else if (screenName === 'Profile') {
-      if (userId) {
-        navigation.navigate('Profile', {userId});
-      } else {
-        Alert.alert('Error', 'No se pudo identificar al usuario.');
-      }
+      console.log(`Navegando a ${screenName} con params:`, params);
+      navigation.navigate(screenName, params);
     } else {
-      navigation.navigate(screenName);
+      Alert.alert('Error', 'No se pudo identificar al usuario.');
+      console.error(
+        `HomeScreen: userId es undefined, no se puede navegar a ${screenName} con parámetros.`,
+      );
     }
-  };
-
+  } else if (screenName === 'Profile') {
+    if (userId) {
+      navigation.navigate('Profile', {userId});
+    } else {
+      Alert.alert('Error', 'No se pudo identificar al usuario.');
+    }
+  } else if (screenName === 'CitaScreen') {
+    // ✅ Manejo especial para la pantalla de Cita
+    if (userId && name) {
+      navigation.navigate('CitaScreen', {
+        user: {
+          id: Number(userId),
+          name: name,
+          photo_url: 'https://i.imgur.com/default-avatar.png', // Puedes actualizarlo con la URL real
+        },
+      });
+    } else {
+      Alert.alert('Error', 'No se pudo identificar al usuario.');
+    }
+  } else {
+    navigation.navigate(screenName);
+  }
+};
   return (
     <View style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />

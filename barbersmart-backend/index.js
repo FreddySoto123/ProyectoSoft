@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const pool = require('./db'); // Importamos la conexión a la BD
 require('dotenv').config(); // Para cargar variables de entorno desde .env
 
@@ -21,13 +22,18 @@ const barbershopRoutes = require('./routes/barbershopRoutes');
 const barberRoutes = require('./routes/barberRoutes');
 const styleRoutes = require('./routes/styleRoutes');
 const simulationRoutes = require('./routes/simulationRoutes');
-// Aquí importarías otros archivos de rutas (ej. appointmentRoutes, serviceRoutes, etc.)
+const serviceRoutes = require('./routes/serviceRoutes');
+const citasRoutes = require('./routes/citas.routes');; // <--- NUEVA IMPORTACIÓN
+// Aquí importarías otros archivos de rutas (ej. appointmentRoutes
+// , serviceRoutes, etc.)
 
 app.use('/api/auth', authRoutes); // Rutas para autenticación y perfil de usuario
-app.use('/api/barbershops', barbershopRoutes); // Rutas para barberías
+app.use('/api', barbershopRoutes); // Rutas para barberías
 app.use('/api/barbers', barberRoutes); // Rutas para perfiles de barberos
 app.use('/api/styles', styleRoutes);
 app.use('/api/simulations', simulationRoutes);
+app.use('/api/servicios', serviceRoutes);
+app.use('/api/citas', citasRoutes);
 // app.use('/api/appointments', appointmentRoutes); // Ejemplo
 
 // RUTA DE PRUEBA DE CONEXIÓN A LA BASE DE DATOS Y ESTADO DEL SERVIDOR

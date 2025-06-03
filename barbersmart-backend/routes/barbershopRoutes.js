@@ -5,8 +5,7 @@ const {
   getBarbershopById,
 } = require('../controllers/barbershopController');
 
-router.get('/', getAllBarbershops);
-
-router.get('/:id', getBarbershopById);
+router.get('/barbershops', getAllBarbershops); // <-- ESTA es la ruta que necesitas
+router.get('/barbershops/:id', getBarbershopById); // <-- para ver detalles
 
 module.exports = router;

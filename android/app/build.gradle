@@ -80,7 +80,7 @@ android {
     namespace "com.barbersmart"
     defaultConfig {
         applicationId "com.barbersmart"
-        minSdkVersion rootProject.ext.minSdkVersion
+        minSdkVersion 21
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
