@@ -90,7 +90,7 @@ const BarbershopDetailScreen: React.FC<Props> = ({route, navigation}) => {
       setError(null);
       try {
         const response = await fetch(
-          `http://192.168.1.202:3001/api/barbershops/${barbershopId}`,
+          `http://6.0.0.104:3001/api/barbershops/${barbershopId}`,
         );
         const data = await response.json();
         if (response.ok) {

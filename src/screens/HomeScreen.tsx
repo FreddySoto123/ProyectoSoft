@@ -12,24 +12,20 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
-  Home: {userId: string; name: string};
-  Profile: {userId: string};
+  Home: { userId: string; name: string };
+  Profile: { userId: string };
   SelectBarbershop: undefined;
-  AppointmentsScreen: undefined; // Consider if this is still needed or if 'Citas' always goes to CitaScreen
-  ImageCaptureScreen: {userId: string};
-  // Change 'Cita' to 'CitaScreen' and ensure params match what's being sent
-  CitaScreen: {user: {id: number; name: string; photo_url: string;};};
-  FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
+  AppointmentsScreen: { userId: number };
+  ImageCaptureScreen: { userId: string };
+  CitaScreen: { user: { id: number; name: string; photo_url: string } };
+  FaceShapeScreen: { userId: string; currentFaceShape?: string | null };
 };
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Home'
->;
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
 
 const HomeScreen: React.FC = () => {
@@ -40,17 +36,17 @@ const HomeScreen: React.FC = () => {
 
   const menuItems = [
     {
-    id: '1',
-    title: 'Agendar una Cita',
-    screen: 'SelectBarbershop', // Ahora va al paso 1
-    iconName: 'store-search-outline',
-  },
-  {
-    id: '2',
-    title: 'Mis Citas',
-    screen: 'AppointmentsScreen', // Esto será para el historial
-    iconName: 'calendar-check-outline',
-  },
+      id: '1',
+      title: 'Agendar una Cita',
+      screen: 'SelectBarbershop',
+      iconName: 'store-search-outline',
+    },
+    {
+      id: '2',
+      title: 'Mis Citas',
+      screen: 'AppointmentsScreen',
+      iconName: 'calendar-check-outline',
+    },
     {
       id: '3',
       title: 'Simulación de cortes con IA',
@@ -65,54 +61,55 @@ const HomeScreen: React.FC = () => {
     },
   ];
 
- const handleMenuItemPress = (
-  screenName: keyof RootStackParamList | undefined,
-  itemTitle: string,
-) => {
-  if (!screenName) {
-    console.log(`${itemTitle} presionado (sin pantalla definida)`);
-    return;
-  }
+  const handleMenuItemPress = (
+    screenName: keyof RootStackParamList | undefined,
+    itemTitle: string,
+  ) => {
+    if (!screenName) {
+      console.log(`${itemTitle} presionado (sin pantalla definida)`);
+      return;
+    }
 
-  if (
-    screenName === 'FaceShapeScreen' ||
-    screenName === 'ImageCaptureScreen'
-  ) {
-    if (userId) {
-      let params: any = {userId};
-      if (screenName === 'FaceShapeScreen') {
-      }
-      console.log(`Navegando a ${screenName} con params:`, params);
-      navigation.navigate(screenName, params);
-    } else {
+    if (!userId) {
       Alert.alert('Error', 'No se pudo identificar al usuario.');
-      console.error(
-        `HomeScreen: userId es undefined, no se puede navegar a ${screenName} con parámetros.`,
-      );
+      console.error(`HomeScreen: userId es undefined, no se puede navegar a ${screenName}`);
+      return;
     }
-  } else if (screenName === 'Profile') {
-    if (userId) {
-      navigation.navigate('Profile', {userId});
-    } else {
-      Alert.alert('Error', 'No se pudo identificar al usuario.');
+
+    switch (screenName) {
+      case 'FaceShapeScreen':
+      case 'ImageCaptureScreen':
+        navigation.navigate(screenName, { userId });
+        break;
+
+      case 'Profile':
+        navigation.navigate('Profile', { userId });
+        break;
+
+      case 'CitaScreen':
+        if (name) {
+          navigation.navigate('CitaScreen', {
+            user: {
+              id: Number(userId),
+              name: name,
+              photo_url: 'https://i.imgur.com/default-avatar.png',
+            },
+          });
+        } else {
+          Alert.alert('Error', 'No se pudo identificar el nombre del usuario.');
+        }
+        break;
+
+      case 'AppointmentsScreen':
+        navigation.navigate('AppointmentsScreen', { userId: Number(userId) });
+        break;
+
+      default:
+        navigation.navigate(screenName);
+        break;
     }
-  } else if (screenName === 'CitaScreen') {
-    // ✅ Manejo especial para la pantalla de Cita
-    if (userId && name) {
-      navigation.navigate('CitaScreen', {
-        user: {
-          id: Number(userId),
-          name: name,
-          photo_url: 'https://i.imgur.com/default-avatar.png', // Puedes actualizarlo con la URL real
-        },
-      });
-    } else {
-      Alert.alert('Error', 'No se pudo identificar al usuario.');
-    }
-  } else {
-    navigation.navigate(screenName);
-  }
-};
+  };
+
   return (
     <View style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />
@@ -121,13 +118,14 @@ const HomeScreen: React.FC = () => {
         <TouchableOpacity
           onPress={() => {
             if (userId) {
-              navigation.navigate('Profile', {userId});
+              navigation.navigate('Profile', { userId });
             } else {
               Alert.alert('Error', 'No se pudo identificar al usuario.');
             }
-          }}>
+          }}
+        >
           <View style={styles.profileIconPlaceholder}>
-            <Text style={{color: '#fff'}}>👤</Text>
+            <Text style={{ color: '#fff' }}>👤</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -138,21 +136,15 @@ const HomeScreen: React.FC = () => {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.welcomeUserText}>
-          ¿Cómo estás, {name || 'Usuario'}?
-        </Text>
+        <Text style={styles.welcomeUserText}>¿Cómo estás, {name || 'Usuario'}?</Text>
 
         <View style={styles.menuGrid}>
           {menuItems.map(item => (
             <TouchableOpacity
               key={item.id}
               style={styles.menuCard}
-              onPress={() =>
-                handleMenuItemPress(
-                  item.screen as keyof RootStackParamList | undefined,
-                  item.title,
-                )
-              }>
+              onPress={() => handleMenuItemPress(item.screen, item.title)}
+            >
               <View style={styles.menuIconContainer}>
                 <Text style={styles.iconPlaceholder}>
                   {item.iconName.substring(0, 1).toUpperCase()}
@@ -167,18 +159,16 @@ const HomeScreen: React.FC = () => {
   );
 };
 
-// Tus estilos (styles) permanecen igual que antes
-// ... (copia y pega tus estilos aquí)
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F4F0E8', // Un color de fondo suave
+    backgroundColor: '#F4F0E8',
   },
   customHeader: {
-    backgroundColor: '#1A1A1A', // Negro o gris muy oscuro
+    backgroundColor: '#1A1A1A',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 15 : 50, // Espacio para la barra de estado
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight! + 15 : 50,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -189,7 +179,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   profileIconPlaceholder: {
-    // Placeholder si no usas react-native-vector-icons aún
     width: 30,
     height: 30,
     borderRadius: 15,
@@ -223,7 +212,7 @@ const styles = StyleSheet.create({
   },
   menuCard: {
     backgroundColor: '#FFFFFF',
-    width: '48%', // Para dos tarjetas por fila con un pequeño espacio
+    width: '48%',
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
@@ -231,16 +220,15 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    minHeight: 160, // Para asegurar una altura mínima
+    minHeight: 160,
   },
   menuIconContainer: {
     marginBottom: 15,
   },
   iconPlaceholder: {
-    // Estilo para el placeholder de texto del icono
     fontSize: 30,
     color: '#333',
   },

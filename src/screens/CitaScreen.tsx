@@ -29,7 +29,7 @@ interface Service {
   precio: number;
 }
 
-const API_BASE = 'http://192.168.1.202:3001/api';
+const API_BASE = 'http://6.0.0.104:3001/api';
 
 const CitaScreen = () => {
   const navigation = useNavigation<any>();
@@ -138,7 +138,9 @@ const CitaScreen = () => {
         Alert.alert('Cita registrada', 'Tu cita ha sido agendada exitosamente.', [
           {
             text: 'Ver mis citas',
-            onPress: () => navigation.navigate('AppointmentsScreen', { userId: user.id }),
+            
+            onPress: () => navigation.navigate('AppointmentsScreen', { userId: user.id }), // Aquí PASA EL userId correcto
+
           },
           { text: 'Cerrar', style: 'cancel' },
         ]);

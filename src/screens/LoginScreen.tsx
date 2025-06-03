@@ -14,11 +14,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 // 👇 Tipado de las rutas
 type RootStackParamList = {
   Login: undefined;
-<<<<<<< HEAD
   Home: { name: string };
-=======
-  Home: { userId: string; name: string };
->>>>>>> 4640940 (cambio por tiempo)
 };
 
 const LoginScreen = () => {
@@ -30,10 +26,13 @@ const LoginScreen = () => {
   const handleLogin = async () => {
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
       const response = await fetch('http://192.168.1.204:3001/api/auth/login', {
 =======
       const response = await fetch('http://192.168.1.202:3001/api/auth/login', {
 >>>>>>> 4640940 (cambio por tiempo)
+      const response = await fetch('http://6.0.0.104:3001/api/auth/login', {
+>>>>>>> d957ca0 (ultimaCita)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
