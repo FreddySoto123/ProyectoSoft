@@ -125,10 +125,10 @@ const AuthNavigator = () => (
         options={{title: 'Reservar Cita'}}
       />
       <Stack.Screen
-  name="AppointmentsScreen"
-  component={AppointmentsScreen}
-  options={{ title: 'Mis Citas' }}
-/>
+         name="AppointmentsScreen"
+         component={AppointmentsScreen}
+         options={{ title: 'Mis Citas' }}
+        />
     </Stack.Navigator>
   </NavigationContainer>
 );

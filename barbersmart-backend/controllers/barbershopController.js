@@ -72,21 +72,18 @@ const getBarbershopById = async (req, res) => {
     // 3. Obtener barberos de la barbería (uniendo con la tabla 'users' para obtener nombre y avatar del barbero)
     const barbersQuery = `
       SELECT 
-        b.id AS barbero_registro_id,      -- ID del registro en la tabla Barberos
-        b.especialidad,                   -- Viene de la tabla 'barberos'
-        b.descripcion_profesional,        -- Viene de la tabla 'barberos'
-        b.calificacion_promedio,          -- Viene de la tabla 'barberos'
-        u.id AS usuario_id,               -- ID del usuario (de la tabla users)
-        u.name AS nombre_barbero,         -- CORREGIDO: usa 'name' de la tabla 'users'
-        u.email AS email_barbero,         -- Viene de la tabla 'users'
-        u.avatar AS avatar_barbero        -- Viene de la tabla 'users'
-        -- u.telefono AS telefono_barbero -- ELIMINADO: 'telefono' no está en la tabla 'users' según la imagen
+        b.id AS barbero_id,          -- ID real en tabla barberos
+        b.usuario_id,                -- ID del usuario (para referencia)
+        b.especialidad,
+        b.descripcion_profesional,
+        b.calificacion_promedio,
+        b.activo,
+        u.name AS nombre_barbero,
+        u.avatar AS avatar_barbero
       FROM barberos b
       JOIN users u ON b.usuario_id = u.id
-      WHERE b.barberia_id = $1 
-        AND b.activo = TRUE 
-        -- AND u.rol = 'Barbero' -- ELIMINADO TEMPORALMENTE: 'rol' no está en 'users' según la imagen
-      ORDER BY u.name ASC; -- CORREGIDO: usa 'name'
+      WHERE b.barberia_id = $1 AND b.activo = TRUE
+      ORDER BY u.name ASC;
     `;
     const barbersResult = await pool.query(barbersQuery, [id]);
     barbershop.barberos = barbersResult.rows; // Añadir como un array al objeto barbershop

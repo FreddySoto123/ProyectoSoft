@@ -15,7 +15,7 @@ const getBarberProfileById = async (req, res) => {
         u.email,
         u.telefono, -- Si ya añadiste esta columna a 'users'
         u.avatar,
-        b.id AS barbero_tabla_id, -- ID del registro en la tabla 'Barberos'
+         b.id AS barbero_id,  -- ID del registro en la tabla 'Barberos'
         b.barberia_id, -- Para saber en qué barbería principal trabaja o para referencia
         bar.nombre AS nombre_barberia, -- Nombre de la barbería principal
         b.especialidad,

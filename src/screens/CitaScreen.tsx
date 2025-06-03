@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, ActivityIndicator
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image, ActivityIndicator, Platform
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-interface Barbershop {
+interface BarbershopDetails {
   id: number;
   nombre: string;
-  logo_url?: string;
+  servicios: Service[];
+  barberos: Barber[];
 }
 
 interface Barber {
-  usuario_id: number; // Usa este ID para navegación
+  barbero_id: number;       // id real barbero
+  usuario_id: number;       // id usuario (opcional para mostrar)
   nombre_barbero: string;
   especialidad?: string;
   avatar_barbero?: string;
@@ -25,13 +27,6 @@ interface Service {
   descripcion?: string;
   duracion_estimada_minutos?: number;
   precio: number;
-}
-
-interface BarbershopDetails {
-  id: number;
-  nombre: string;
-  servicios: Service[];
-  barberos: Barber[];
 }
 
 const API_BASE = 'http://192.168.1.202:3001/api';
@@ -51,12 +46,11 @@ const CitaScreen = () => {
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [date, setDate] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
 
-  // Estado para selector de fecha y hora
-  const [fecha, setFecha] = useState<Date>(new Date());
-  const [mostrarPicker, setMostrarPicker] = useState(false);
-  const [modoPicker, setModoPicker] = useState<'date' | 'time'>('date');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -64,10 +58,20 @@ const CitaScreen = () => {
       try {
         const res = await fetch(`${API_BASE}/barbershops/${barberiaId}`);
         const data = await res.json();
+
+        // Para que barberos estén bien con id real, hacemos fetch adicional o usas los que ya vienen (asegúrate backend incluye barbero_id)
+        if (data.barberos) {
+          // aseguramos que cada barbero tenga barbero_id (corrige backend si no es así)
+          data.barberos = data.barberos.map((b: any) => ({
+            ...b,
+            barbero_id: b.barbero_id || b.id || b.usuario_id,
+          }));
+        }
+
         setBarbershop(data);
 
         if (barberoId) {
-          const foundBarber = data.barberos.find((b: Barber) => b.usuario_id === barberoId);
+          const foundBarber = data.barberos.find((b: Barber) => b.usuario_id === barberoId || b.barbero_id === barberoId);
           setSelectedBarber(foundBarber || null);
         }
       } catch (error) {
@@ -81,44 +85,45 @@ const CitaScreen = () => {
 
   const onSelectBarber = (barber: Barber) => {
     setSelectedBarber(barber);
-    setSelectedService(null); // limpia el servicio si cambia el barbero
+    setSelectedService(null);
   };
 
   const onSelectService = (service: Service) => {
     setSelectedService(service);
   };
 
-  const mostrarSelector = (modo: 'date' | 'time') => {
-    setModoPicker(modo);
-    setMostrarPicker(true);
+  const onChangeDateTime = (event: any, selectedDate?: Date) => {
+    setShowPicker(false);
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
   };
 
-  const onChangeFechaHora = (event: any, selectedDate?: Date) => {
-    setMostrarPicker(false);
-    if (selectedDate) {
-      setFecha(selectedDate);
-    }
+  const showDatepicker = () => {
+    setPickerMode('date');
+    setShowPicker(true);
+  };
+
+  const showTimepicker = () => {
+    setPickerMode('time');
+    setShowPicker(true);
   };
 
   const onConfirmAppointment = async () => {
     if (!selectedBarber || !selectedService || !barbershop) {
-      Alert.alert('Atención', 'Por favor selecciona un barbero y un servicio.');
+      Alert.alert('Atención', 'Por favor selecciona un barbero, servicio, fecha y hora.');
       return;
     }
 
     setIsSubmitting(true);
 
-    const fechaISO = fecha.toISOString();
-    const fechaStr = fechaISO.split('T')[0]; // yyyy-mm-dd
-    const horaStr = fechaISO.split('T')[1].substring(0, 8); // hh:mm:ss
-
     const payload = {
       usuario_id: user.id,
       barberia_id: barbershop.id,
-      barbero_id: selectedBarber.usuario_id,
+      barbero_id: selectedBarber.barbero_id,  // usa el id real del barbero aquí
       servicios_id: [selectedService.id],
-      fecha: fechaStr,
-      hora: horaStr,
+      fecha: date.toISOString().split('T')[0],
+      hora: date.toTimeString().split(' ')[0].substring(0, 8),
     };
 
     try {
@@ -138,7 +143,7 @@ const CitaScreen = () => {
           { text: 'Cerrar', style: 'cancel' },
         ]);
       } else {
-        Alert.alert('Error', data.message || 'No se pudo registrar la cita.');
+        Alert.alert('Error', data.error || 'No se pudo registrar la cita.');
       }
     } catch (error) {
       Alert.alert('Error de red', 'No se pudo conectar con el servidor.');
@@ -158,7 +163,6 @@ const CitaScreen = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Nombre y logo de la barbería */}
       <View style={styles.barbershopHeader}>
         {barbershop.logo_url ? (
           <Image source={{ uri: barbershop.logo_url }} style={styles.logo} />
@@ -168,17 +172,16 @@ const CitaScreen = () => {
         <Text style={styles.barbershopName}>{barbershop.nombre}</Text>
       </View>
 
-      {/* Barberos */}
       <Text style={styles.sectionTitle}>Barberos</Text>
       {barbershop.barberos.length === 0 ? (
         <Text style={styles.emptyText}>No hay barberos disponibles.</Text>
       ) : (
         barbershop.barberos.map((barber) => (
           <TouchableOpacity
-            key={barber.usuario_id}
+            key={barber.barbero_id}
             style={[
               styles.card,
-              selectedBarber?.usuario_id === barber.usuario_id && styles.selectedCard,
+              selectedBarber?.barbero_id === barber.barbero_id && styles.selectedCard,
             ]}
             onPress={() => onSelectBarber(barber)}
           >
@@ -197,7 +200,6 @@ const CitaScreen = () => {
         ))
       )}
 
-      {/* Servicios */}
       {selectedBarber && (
         <>
           <Text style={styles.sectionTitle}>Servicios</Text>
@@ -226,29 +228,29 @@ const CitaScreen = () => {
         </>
       )}
 
-      {/* Selector fecha/hora */}
-      {selectedBarber && selectedService && (
-        <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginVertical: 15 }}>
-          <TouchableOpacity style={styles.selectorButton} onPress={() => mostrarSelector('date')}>
-            <Text>Fecha: {fecha.toLocaleDateString()}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.selectorButton} onPress={() => mostrarSelector('time')}>
-            <Text>Hora: {fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Fecha y Hora</Text>
+      <View style={styles.dateTimeRow}>
+        <TouchableOpacity style={styles.dateTimeButton} onPress={showDatepicker}>
+          <MaterialIcons name="calendar-today" size={22} color="#555" />
+          <Text style={styles.dateTimeText}>{date.toLocaleDateString()}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.dateTimeButton} onPress={showTimepicker}>
+          <MaterialIcons name="access-time" size={22} color="#555" />
+          <Text style={styles.dateTimeText}>{date.toLocaleTimeString()}</Text>
+        </TouchableOpacity>
+      </View>
 
-      {mostrarPicker && (
+      {showPicker && (
         <DateTimePicker
-          value={fecha}
-          mode={modoPicker}
+          value={date}
+          mode={pickerMode}
+          is24Hour={true}
           display="default"
-          onChange={onChangeFechaHora}
+          onChange={onChangeDateTime}
           minimumDate={new Date()}
         />
       )}
 
-      {/* Botón Confirmar */}
       {selectedBarber && selectedService && (
         <TouchableOpacity
           style={[styles.confirmButton, isSubmitting && { opacity: 0.7 }]}
@@ -338,12 +340,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#27ae60',
   },
-  selectorButton: {
-    backgroundColor: '#e0e0e0',
-    padding: 12,
-    borderRadius: 8,
-    minWidth: 140,
+  dateTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#eee',
+    padding: 10,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  dateTimeText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#333',
   },
   confirmButton: {
     backgroundColor: '#2c3e50',
