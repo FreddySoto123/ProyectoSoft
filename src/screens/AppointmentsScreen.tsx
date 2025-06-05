@@ -59,7 +59,7 @@ const AppointmentsScreen: React.FC<Props> = ({ route, navigation }) => {
       setLoading(true); // Set loading true at the start of fetch
       try {
         // Replace with your actual API endpoint if different, or use an env variable
-        const response = await fetch(`http://6.0.0.104:3001/api/citas/user/${userId}`);
+        const response = await fetch(`http://172.172.9.19:3001/api/citas/user/${userId}`);
         const data = await response.json();
 
         if (response.ok) {

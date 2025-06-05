@@ -51,7 +51,7 @@ const SelectBarbershopScreen: React.FC = () => {
       setError(null);
       console.log('SELECT BARBERSHOP SCREEN - Fetching barbershops...');
       try {
-        const response = await fetch('http://6.0.0.104:3001/api/barbershops');
+        const response = await fetch('http://172.172.9.19:3001/api/barbershops');
         const data = await response.json();
 
         if (response.ok) {

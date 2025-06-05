@@ -18,10 +18,12 @@ import HairstyleSelectionScreen from '../simulation/HairstyleSelectionScreen';
 import SimulationResultScreen from '../simulation/SimulationResultScreen';
 import CitaScreen from '../CitaScreen'; // Asegúrate que la importación es correcta
 import AppointmentsScreen from '../AppointmentsScreen';
+import BarberDashboardScreen from '../BarberDashboardScreen';
 // Define tu RootStackParamList
 export type RootStackParamList = { // Exporta el tipo si lo usas en otros archivos
   Login: undefined;
   Register: undefined;
+  BarberDashboard: { userId: string; name: string; rol: string }; 
   Home: { userId: string; name: string };
   Services: undefined;
   Simulation: undefined;
@@ -131,6 +133,7 @@ const AuthNavigator = () => (
         options={{ title: 'Mis Citas' }}
         initialParams={{ userId: null }} // o undefined
       />
+       <Stack.Screen name="BarberDashboard" component={BarberDashboardScreen} options={{ title: 'Panel de Barbero' /* , headerLeft: () => null */ }} />
 
     </Stack.Navigator>
   </NavigationContainer>

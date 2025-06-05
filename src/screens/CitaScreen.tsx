@@ -29,7 +29,7 @@ interface Service {
   precio: number;
 }
 
-const API_BASE = 'http://6.0.0.104:3001/api';
+const API_BASE = 'http://172.172.9.19:3001/api';
 
 const CitaScreen = () => {
   const navigation = useNavigation<any>();
