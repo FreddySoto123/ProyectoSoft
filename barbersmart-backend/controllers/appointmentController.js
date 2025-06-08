@@ -270,7 +270,7 @@ const getLibelulaPaymentUrlForAppointment = async (req, res) => {
         ? ci_cliente_form.trim()
         : '0000000',
       razon_social: razon_social_defecto, // Usar el valor por defecto
-      emite_factura: false,
+      emite_factura: true,
       moneda: 'BOB',
       lineas_detalle_deuda: cita.lineas_detalle_obj.map(s => ({
         ...s,
