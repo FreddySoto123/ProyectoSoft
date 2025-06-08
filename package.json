@@ -7,7 +7,8 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "vercel-build": "npx expo export -p web"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
