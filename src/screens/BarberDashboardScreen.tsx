@@ -52,7 +52,7 @@ const BarberDashboardScreen: React.FC<Props> = ({ route, navigation }) => {
       setError(null);
       try {
         // Este endpoint debe devolver las citas asignadas al 'barbero_id' que es el 'usuarios.id' del barbero.
-        const response = await fetch(`http://172.172.9.19:3001/api/citas/barber/${userId}`);
+        const response = await fetch(`http://localhost:3001/api/citas/barber/${userId}`);
         const data = await response.json();
 
         if (response.ok) {

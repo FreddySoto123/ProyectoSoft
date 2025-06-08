@@ -21,43 +21,47 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
-  Home: { userId: string; name: string; rol: string };
-  BarberDashboard: { userId: string; name: string; rol: string };
-  // ... tus otras rutas
-  Profile: { userId: string };
+  Home: {userId: string; name: string; rol: string};
+  BarberDashboard: {userId: string; name: string; rol: string};
+  ForgotPassword: undefined;
+  VerifyCode: {email: string};
+  ResetPassword: {email: string; code: string};
   SelectBarbershop: undefined;
-  BarbershopDetail: { barbershopId: number | string; barbershopName: string };
-  BarberProfile: { barberUserId: number | string; barberName: string };
+  BarbershopDetail: {barbershopId: number | string; barbershopName: string};
+  BarberProfile: {barberUserId: number | string; barberName: string};
   CitaScreen: {
     barberiaId: number;
     barberoId?: number;
-    user: { id: number | string };
+    user: {id: number | string};
   };
-  AppointmentsScreen: { userId: number | string | null };
+  AppointmentsScreen: {userId: number | string | null};
   Services: undefined;
   Simulation: undefined;
-  ImageCaptureScreen: { userId: string };
-  HairstyleSelectionScreen: { userId: string; userImageUri: string };
+  ImageCaptureScreen: {userId: string};
+  HairstyleSelectionScreen: {userId: string; userImageUri: string};
   SimulationResultScreen: {
     userId: string;
     userImageUri: string;
     hairstyleId: string | number;
     hairstyleImageUri?: string;
   };
-  FaceShapeScreen: { userId: string; currentFaceShape?: string | null };
+  FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
 };
-
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false); // Para el ActivityIndicator
 
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Campos incompletos', 'Por favor, ingresa tu correo y contraseña.');
+      Alert.alert(
+        'Campos incompletos',
+        'Por favor, ingresa tu correo y contraseña.',
+      );
       return;
     }
 
@@ -65,14 +69,17 @@ const LoginScreen = () => {
     console.log('FRONTEND: Intentando iniciar sesión con:', {email, password});
 
     try {
-      const response = await fetch('http://172.172.9.19:3001/api/auth/login', {
+      const response = await fetch('http://localhost:3001/api/auth/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({email: email.trim(), password}), // Enviar email sin espacios
       });
 
       const responseText = await response.text(); // Leer como texto primero para depurar
-      console.log('FRONTEND: Respuesta del servidor (texto plano):', responseText);
+      console.log(
+        'FRONTEND: Respuesta del servidor (texto plano):',
+        responseText,
+      );
       console.log('FRONTEND: Status de la respuesta:', response.status);
 
       let data;
@@ -80,25 +87,43 @@ const LoginScreen = () => {
         data = JSON.parse(responseText); // Intentar parsear el texto
         console.log('FRONTEND: Datos de la respuesta (JSON parseado):', data);
       } catch (jsonError) {
-        console.error('FRONTEND: Error al parsear JSON de la respuesta:', jsonError);
+        console.error(
+          'FRONTEND: Error al parsear JSON de la respuesta:',
+          jsonError,
+        );
         Alert.alert(
           '❌ Error de respuesta',
-          `El servidor respondió con un formato inesperado (Status: ${response.status}). Contenido: ${responseText.substring(0, 100)}...`,
+          `El servidor respondió con un formato inesperado (Status: ${
+            response.status
+          }). Contenido: ${responseText.substring(0, 100)}...`,
         );
         setLoading(false);
         return;
       }
 
-      if (response.ok && data.user && data.user.id && data.user.rol && data.token) {
+      if (
+        response.ok &&
+        data.user &&
+        data.user.id &&
+        data.user.rol &&
+        data.token
+      ) {
         // Login exitoso y la respuesta es la esperada
-        console.log('FRONTEND: Login exitoso. Usuario:', data.user, 'Token:', data.token);
+        console.log(
+          'FRONTEND: Login exitoso. Usuario:',
+          data.user,
+          'Token:',
+          data.token,
+        );
         Alert.alert('✅ Bienvenido', `Hola, ${data.user.name}!`);
 
         // Guardar token y datos del usuario en AsyncStorage
         try {
           await AsyncStorage.setItem('@user_token', data.token);
           await AsyncStorage.setItem('@user_data', JSON.stringify(data.user));
-          console.log('FRONTEND: Token y datos de usuario guardados en AsyncStorage.');
+          console.log(
+            'FRONTEND: Token y datos de usuario guardados en AsyncStorage.',
+          );
         } catch (e) {
           console.error('FRONTEND: Error guardando datos en AsyncStorage', e);
           // No bloquear el flujo, pero alertar o loguear
@@ -107,27 +132,48 @@ const LoginScreen = () => {
         const userIdStr = String(data.user.id);
 
         if (data.user.rol === 'Barbero') {
-          console.log('FRONTEND: Usuario es Barbero, navegando a BarberDashboard');
+          console.log(
+            'FRONTEND: Usuario es Barbero, navegando a BarberDashboard',
+          );
           navigation.replace('BarberDashboard', {
             userId: userIdStr,
             name: data.user.name,
             rol: data.user.rol,
           });
-        } else if (data.user.rol === 'Cliente' || data.user.rol === 'Administrador') {
-          console.log(`FRONTEND: Usuario es ${data.user.rol}, navegando a Home`);
+        } else if (
+          data.user.rol === 'Cliente' ||
+          data.user.rol === 'Administrador'
+        ) {
+          console.log(
+            `FRONTEND: Usuario es ${data.user.rol}, navegando a Home`,
+          );
           navigation.replace('Home', {
             userId: userIdStr,
             name: data.user.name,
             rol: data.user.rol,
           });
         } else {
-          console.warn('FRONTEND: Rol de usuario no reconocido:', data.user.rol);
-          Alert.alert('Error de Acceso', 'Tu tipo de cuenta no tiene una pantalla de inicio configurada.');
+          console.warn(
+            'FRONTEND: Rol de usuario no reconocido:',
+            data.user.rol,
+          );
+          Alert.alert(
+            'Error de Acceso',
+            'Tu tipo de cuenta no tiene una pantalla de inicio configurada.',
+          );
         }
       } else {
         // El servidor respondió con un error (4xx, 5xx) o la data no es la esperada
-        const errorMessage = data?.error || data?.message || `Error desconocido del servidor (Status: ${response.status}).`;
-        console.error('FRONTEND: Error del servidor (manejado):', errorMessage, 'Data completa:', data);
+        const errorMessage =
+          data?.error ||
+          data?.message ||
+          `Error desconocido del servidor (Status: ${response.status}).`;
+        console.error(
+          'FRONTEND: Error del servidor (manejado):',
+          errorMessage,
+          'Data completa:',
+          data,
+        );
         Alert.alert('⚠️ Error de Login', errorMessage);
       }
     } catch (error: any) {
@@ -139,6 +185,10 @@ const LoginScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = () => {
+    navigation.navigate('ForgotPassword');
   };
 
   return (
@@ -169,7 +219,11 @@ const LoginScreen = () => {
         value={password}
         onChangeText={setPassword}
       />
-
+      <TouchableOpacity
+        onPress={handleForgotPassword}
+        style={styles.forgotPasswordLink}>
+        <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+      </TouchableOpacity>
       <TouchableOpacity
         style={styles.button}
         onPress={handleLogin}
@@ -182,8 +236,12 @@ const LoginScreen = () => {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.registerLink}>
-        <Text style={styles.registerLinkText}>¿No tienes cuenta? Regístrate</Text>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Register')}
+        style={styles.registerLink}>
+        <Text style={styles.registerLinkText}>
+          ¿No tienes cuenta? Regístrate
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -242,7 +300,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#333',
     textDecorationLine: 'underline',
-  }
+  },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+    marginTop: 5,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#007AFF',
+  },
 });
 
 export default LoginScreen;

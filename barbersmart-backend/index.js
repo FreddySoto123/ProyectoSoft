@@ -12,7 +12,7 @@ app.use(cors());
 // Middleware para parsear cuerpos de solicitud JSON
 app.use(express.json());
 app.use(cors({
-  origin: 'http://172.172.9.19:3000' // Cambia al dominio/IP del cliente si quieres restringir
+  origin: 'http://localhost:3000' // Cambia al dominio/IP del cliente si quieres restringir
 }));
 // Middleware para parsear cuerpos de solicitud URL-encoded (menos común para APIs JSON, pero no hace daño)
 app.use(express.urlencoded({extended: true}));
