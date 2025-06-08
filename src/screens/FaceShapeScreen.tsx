@@ -288,7 +288,7 @@ const FaceShapeScreen: React.FC = () => {
     setIsSaving(true);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/auth/profile/${userId}`,
+        `http://192.168.1.202:3001/api/auth/profile/${userId}`,
         {
           method: 'PUT',
           headers: {'Content-Type': 'application/json'},

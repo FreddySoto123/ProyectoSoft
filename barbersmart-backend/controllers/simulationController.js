@@ -444,7 +444,6 @@ Output: Genera la imagen editada.`;
         error.stack,
       );
     }
-
     res.status(500).json({
       error: 'Error del servidor al generar la simulación.',
       details: errorMessage,

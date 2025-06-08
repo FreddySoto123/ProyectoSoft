@@ -90,7 +90,7 @@ const BarbershopDetailScreen: React.FC<Props> = ({route, navigation}) => {
       setError(null);
       try {
         const response = await fetch(
-          `http://localhost:3001/api/barbershops/${barbershopId}`,
+          `http://172.172.9.19:3001/api/barbershops/${barbershopId}`,
         );
         const data = await response.json();
         if (response.ok) {
@@ -131,12 +131,20 @@ const BarbershopDetailScreen: React.FC<Props> = ({route, navigation}) => {
     );
   }
 
-  const handleBookAppointment = (service?: Service, barber?: Barber) => {
-    Alert.alert(
-      'Próximamente',
-      'Funcionalidad de agendar cita aún no implementada.',
-    );
-  };
+const handleBookAppointment = (service?: Service, barber?: Barber) => {
+  if (!barbershop) return;
+
+  if (barbershop.barberos.length > 0) {
+    const selectedBarbero = barbershop.barberos[0]; // Puedes permitir seleccionar después
+    navigation.navigate('CitaScreen', {
+      user: { id: 1 }, // ⚠️ Ajusta con el usuario real autenticado
+      barberiaId: Number(barbershop.id),
+      barberoId: Number(selectedBarbero.usuario_id),
+    });
+  } else {
+    Alert.alert("No hay barberos disponibles.");
+  }
+};
 
   return (
     <ScrollView

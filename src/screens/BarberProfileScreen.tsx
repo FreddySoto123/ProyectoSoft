@@ -18,33 +18,37 @@ interface BarberProfileData {
   usuario_id: number | string;
   nombre: string;
   email?: string;
-  telefono?: string; // Si lo añades a la tabla 'users' y a la query del backend
+  telefono?: string;
   avatar?: string;
-  barberia_id?: number | string;
+  barberia_id?: number | string; // MUY IMPORTANTE: Asegúrate que tu API devuelve esto
   nombre_barberia?: string;
   especialidad?: string;
   descripcion_profesional?: string;
-  calificacion_promedio?: number | string; // Podría ser string desde la BD
+  calificacion_promedio?: number | string;
   activo?: boolean;
-  // Añade aquí campos para horarios, reseñas, etc., si los implementas
-  // horarios?: any[];
-  // reseñas?: any[];
 }
 
 // Tipos para la navegación
-type RootStackParamListFromBarberProfile = {
-  // ... tus otras rutas
+// Idealmente, esta RootStackParamList se define en un lugar central
+// y CitaScreen también está definida allí.
+export type RootStackParamListFromBarberProfile = {
   BarberProfile: {barberUserId: number | string; barberName: string};
-  // AppointmentBooking: { barberId: number | string; barbershopId?: number | string };
+  CitaScreen: { // <--- AÑADIR CitaScreen aquí para el tipado de navigation.navigate
+    barberiaId: number;
+    barberoId: number;
+    user: {id: number; /* otros campos del usuario */};
+  };
+  // ... tus otras rutas
 };
 
 type BarberProfileScreenRouteProp = RouteProp<
   RootStackParamListFromBarberProfile,
   'BarberProfile'
 >;
+
+// Actualiza el tipo de navigation para que conozca 'CitaScreen'
 type BarberProfileScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamListFromBarberProfile,
-  'BarberProfile'
+  RootStackParamListFromBarberProfile // Usa el tipo que ahora incluye CitaScreen
 >;
 
 type Props = {
@@ -60,8 +64,12 @@ const BarberProfileScreen: React.FC<Props> = ({route, navigation}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // --- OBTENER USUARIO LOGUEADO ---
+  // ESTO ES UNA SIMULACIÓN. Debes reemplazarlo con tu lógica real
+  // para obtener el usuario autenticado (ej. desde un Context API, AsyncStorage, Redux, etc.)
+  const loggedInUser = {id: 1, nombre: 'Usuario Ejemplo'}; // SIMULACIÓN
+
   useEffect(() => {
-    // Opcional: Actualizar el título de la pantalla
     navigation.setOptions({title: barberName || 'Perfil del Barbero'});
 
     const fetchBarberDetails = async () => {
@@ -71,13 +79,21 @@ const BarberProfileScreen: React.FC<Props> = ({route, navigation}) => {
         `BARBER PROFILE SCREEN - Fetching profile for barberUserId: ${barberUserId}`,
       );
       try {
+        // Asegúrate que la IP sea accesible desde tu dispositivo/emulador
+        // Si usas emulador Android y tu API corre en localhost en tu PC: http://10.0.2.2:3001
+        // Si usas dispositivo físico, usa la IP de tu PC en la red local: http://TU_IP_LOCAL:3001
         const response = await fetch(
-          `http://localhost:3001/api/barbers/profile/${barberUserId}`,
+          `http://172.172.9.19:3001/api/barbers/profile/${barberUserId}`, // Ajusta esta URL si es necesario
         );
         const data = await response.json();
 
         if (response.ok) {
           console.log('BARBER PROFILE SCREEN - Profile fetched:', data);
+          // Verifica que barberia_id venga en 'data'
+          if (data && typeof data.barberia_id === 'undefined') {
+            console.warn("ADVERTENCIA: El perfil del barbero no incluye 'barberia_id'. No se podrá agendar cita.");
+            // Podrías incluso mostrar una alerta al usuario si es crítico
+          }
           setBarberProfile(data);
         } else {
           console.error(
@@ -107,6 +123,51 @@ const BarberProfileScreen: React.FC<Props> = ({route, navigation}) => {
     }
   }, [barberUserId, navigation, barberName]);
 
+  const handleBookWithBarber = () => { // <--- MOVIDO AQUÍ DENTRO DEL COMPONENTE
+    if (!barberProfile) {
+      Alert.alert('Error', 'No se ha cargado el perfil del barbero.');
+      return;
+    }
+
+    // Comprueba si loggedInUser es válido (si tu simulación o lógica real puede devolver null)
+    if (!loggedInUser || typeof loggedInUser.id === 'undefined') {
+      Alert.alert(
+        'Error de Autenticación',
+        'No se pudo obtener la información del usuario. Por favor, inicia sesión.',
+      );
+      // Aquí podrías redirigir a la pantalla de Login si es necesario
+      // navigation.navigate('LoginScreen');
+      return;
+    }
+
+    const barberiaIdFromProfile = barberProfile.barberia_id;
+    const barberoIdFromProfile = barberProfile.usuario_id; // que es lo mismo que barberUserId
+
+    if (
+      typeof barberiaIdFromProfile === 'undefined' ||
+      barberiaIdFromProfile === null
+    ) {
+      Alert.alert(
+        'Error',
+        'Información de la barbería no disponible en el perfil del barbero. No se puede agendar.',
+      );
+      return;
+    }
+
+    console.log('Navegando a CitaScreen con:', {
+      barberiaId: Number(barberiaIdFromProfile),
+      barberoId: Number(barberoIdFromProfile),
+      user: loggedInUser,
+    });
+
+    // El tipado de navigation ahora debería reconocer 'CitaScreen' y sus params
+    navigation.navigate('CitaScreen', {
+      barberiaId: Number(barberiaIdFromProfile),
+      barberoId: Number(barberoIdFromProfile),
+      user: loggedInUser,
+    });
+  };
+
   if (loading) {
     return (
       <View style={[styles.screenContainer, styles.centerContent]}>
@@ -126,17 +187,7 @@ const BarberProfileScreen: React.FC<Props> = ({route, navigation}) => {
     );
   }
 
-  const handleBookWithBarber = () => {
-    Alert.alert(
-      'Agendar',
-      `Agendar cita con ${barberProfile.nombre}. Funcionalidad próximamente.`,
-    );
-    // navigation.navigate('AppointmentBooking', {
-    //   barberId: barberProfile.usuario_id,
-    //   barbershopId: barberProfile.barberia_id // Si tienes la barberia_id aquí
-    // });
-  };
-
+  // El return JSX del componente va aquí, después de toda la lógica y funciones
   return (
     <ScrollView
       style={styles.screenContainer}
@@ -180,14 +231,8 @@ const BarberProfileScreen: React.FC<Props> = ({route, navigation}) => {
         {barberProfile.telefono && (
           <IconText icon="📞" text={barberProfile.telefono} />
         )}
-        {/* Aquí podrías añadir más info si la tienes */}
       </View>
 
-      {/* Aquí podrías añadir secciones para:
-          - Horarios del barbero
-          - Reseñas
-          - Galería de trabajos/portafolio
-      */}
       <View style={styles.detailCard}>
         <Text style={styles.sectionTitle}>Calificación</Text>
         <Text style={styles.ratingText}>
@@ -199,7 +244,8 @@ const BarberProfileScreen: React.FC<Props> = ({route, navigation}) => {
 
       <TouchableOpacity
         style={styles.bookButton}
-        onPress={handleBookWithBarber}>
+        onPress={handleBookWithBarber} // Llama a la función definida dentro del componente
+      >
         <Text style={styles.bookButtonText}>
           Agendar con {barberProfile.nombre.split(' ')[0]}
         </Text>
@@ -208,7 +254,7 @@ const BarberProfileScreen: React.FC<Props> = ({route, navigation}) => {
   );
 };
 
-// Componente IconText (puedes moverlo a un archivo utils si lo reusas)
+// Componente IconText (permanece igual)
 const IconText: React.FC<{icon: string; text?: string; style?: object}> = ({
   icon,
   text,
@@ -221,6 +267,7 @@ const IconText: React.FC<{icon: string; text?: string; style?: object}> = ({
     </View>
   ) : null;
 
+// Estilos (permanecen igual)
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,

@@ -1,3 +1,4 @@
+// frontend/screens/LoginScreen.tsx
 import React, {useState} from 'react';
 import {
   View,
@@ -7,86 +8,143 @@ import {
   Image,
   Alert,
   TouchableOpacity,
+  ActivityIndicator, // Para feedback visual
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+// Asume que tienes AsyncStorage para guardar el token y datos del usuario
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 👇 Tipado de las rutas
-type RootStackParamList = {
+// Asegúrate que RootStackParamList está bien definida y exportada (idealmente en tu archivo de navegación)
+// Ejemplo (ajusta según tu estructura):
+// import type { RootStackParamList } from '../navigation/AuthNavigator';
+export type RootStackParamList = {
   Login: undefined;
-  Home: {name: string};
+  Register: undefined;
+  Home: { userId: string; name: string; rol: string };
+  BarberDashboard: { userId: string; name: string; rol: string };
+  // ... tus otras rutas
+  Profile: { userId: string };
+  SelectBarbershop: undefined;
+  BarbershopDetail: { barbershopId: number | string; barbershopName: string };
+  BarberProfile: { barberUserId: number | string; barberName: string };
+  CitaScreen: {
+    barberiaId: number;
+    barberoId?: number;
+    user: { id: number | string };
+  };
+  AppointmentsScreen: { userId: number | string | null };
+  Services: undefined;
+  Simulation: undefined;
+  ImageCaptureScreen: { userId: string };
+  HairstyleSelectionScreen: { userId: string; userImageUri: string };
+  SimulationResultScreen: {
+    userId: string;
+    userImageUri: string;
+    hairstyleId: string | number;
+    hairstyleImageUri?: string;
+  };
+  FaceShapeScreen: { userId: string; currentFaceShape?: string | null };
 };
+
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false); // Para el ActivityIndicator
 
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleLogin = async () => {
-    console.log('Intentando iniciar sesión con:', {email, password}); // LOG 1: Datos de entrada
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Campos incompletos', 'Por favor, ingresa tu correo y contraseña.');
+      return;
+    }
+
+    setLoading(true);
+    console.log('FRONTEND: Intentando iniciar sesión con:', {email, password});
+
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch('http://172.172.9.19:3001/api/auth/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email, password}),
+        body: JSON.stringify({email: email.trim(), password}), // Enviar email sin espacios
       });
 
-      console.log('Respuesta del servidor (status):', response.status); // LOG 2: Status de la respuesta
+      const responseText = await response.text(); // Leer como texto primero para depurar
+      console.log('FRONTEND: Respuesta del servidor (texto plano):', responseText);
+      console.log('FRONTEND: Status de la respuesta:', response.status);
 
-      // Es importante intentar parsear el JSON incluso si response.ok es false,
-      // porque el servidor podría enviar un mensaje de error en el cuerpo JSON.
       let data;
       try {
-        data = await response.json();
-        console.log('Datos de la respuesta (JSON):', data); // LOG 3: Cuerpo de la respuesta JSON
+        data = JSON.parse(responseText); // Intentar parsear el texto
+        console.log('FRONTEND: Datos de la respuesta (JSON parseado):', data);
       } catch (jsonError) {
-        // Si falla el .json(), es probable que la respuesta no sea JSON (ej. HTML de error 500 o texto plano)
-        console.error('Error al parsear JSON de la respuesta:', jsonError); // LOG 4: Error parseando JSON
-        const textResponse = await response.text(); // Intentar leer como texto para ver qué llegó
-        console.log('Respuesta del servidor (texto plano):', textResponse); // LOG 5: Cuerpo como texto
+        console.error('FRONTEND: Error al parsear JSON de la respuesta:', jsonError);
         Alert.alert(
           '❌ Error de respuesta',
-          `El servidor respondió con un formato inesperado (Status: ${response.status}). Intenta más tarde.`,
+          `El servidor respondió con un formato inesperado (Status: ${response.status}). Contenido: ${responseText.substring(0, 100)}...`,
         );
-        return; // Salir de la función si no se pudo parsear el JSON
+        setLoading(false);
+        return;
       }
 
-      if (response.ok) {
-        // status está en el rango 200-299
-        Alert.alert('✅ Bienvenido', `${data.user.name}`);
-        navigation.navigate('Home', {
-          userId: data.user.id,
-          name: data.user.name,
-        });
+      if (response.ok && data.user && data.user.id && data.user.rol && data.token) {
+        // Login exitoso y la respuesta es la esperada
+        console.log('FRONTEND: Login exitoso. Usuario:', data.user, 'Token:', data.token);
+        Alert.alert('✅ Bienvenido', `Hola, ${data.user.name}!`);
+
+        // Guardar token y datos del usuario en AsyncStorage
+        try {
+          await AsyncStorage.setItem('@user_token', data.token);
+          await AsyncStorage.setItem('@user_data', JSON.stringify(data.user));
+          console.log('FRONTEND: Token y datos de usuario guardados en AsyncStorage.');
+        } catch (e) {
+          console.error('FRONTEND: Error guardando datos en AsyncStorage', e);
+          // No bloquear el flujo, pero alertar o loguear
+        }
+
+        const userIdStr = String(data.user.id);
+
+        if (data.user.rol === 'Barbero') {
+          console.log('FRONTEND: Usuario es Barbero, navegando a BarberDashboard');
+          navigation.replace('BarberDashboard', {
+            userId: userIdStr,
+            name: data.user.name,
+            rol: data.user.rol,
+          });
+        } else if (data.user.rol === 'Cliente' || data.user.rol === 'Administrador') {
+          console.log(`FRONTEND: Usuario es ${data.user.rol}, navegando a Home`);
+          navigation.replace('Home', {
+            userId: userIdStr,
+            name: data.user.name,
+            rol: data.user.rol,
+          });
+        } else {
+          console.warn('FRONTEND: Rol de usuario no reconocido:', data.user.rol);
+          Alert.alert('Error de Acceso', 'Tu tipo de cuenta no tiene una pantalla de inicio configurada.');
+        }
       } else {
-        // Errores del servidor (4xx, 5xx) donde el cuerpo SÍ fue JSON
-        console.error(
-          'Error del servidor (manejado):',
-          data.error || data.message || 'Error desconocido del servidor',
-        ); // LOG 6: Error específico del servidor
-        Alert.alert(
-          '⚠️ Error',
-          data.error || data.message || `Error ${response.status}`,
-        );
+        // El servidor respondió con un error (4xx, 5xx) o la data no es la esperada
+        const errorMessage = data?.error || data?.message || `Error desconocido del servidor (Status: ${response.status}).`;
+        console.error('FRONTEND: Error del servidor (manejado):', errorMessage, 'Data completa:', data);
+        Alert.alert('⚠️ Error de Login', errorMessage);
       }
-    } catch (error) {
-      // Este catch se activa por errores de red (no se puede conectar)
-      // o si algo falla ANTES o DESPUÉS de la llamada a fetch pero DENTRO del try principal
-      // (ej. un error en navigation.navigate, aunque es menos probable aquí).
-      console.error('Error en handleLogin (catch principal):', error); // LOG 7: Error de red o similar
+    } catch (error: any) {
+      console.error('FRONTEND: Error en handleLogin (catch principal):', error);
       Alert.alert(
-        '❌ Error de red',
-        'No se pudo conectar con el servidor o ocurrió un error inesperado.',
+        '❌ Error de Conexión',
+        'No se pudo conectar con el servidor o ocurrió un error inesperado. Verifica tu conexión a internet.',
       );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
       <Image
-        source={require('../../assets/barbersmart-logo.png')}
+        source={require('../../assets/barbersmart-logo.png')} // Asegúrate que la ruta es correcta
         style={styles.logo}
         resizeMode="contain"
       />
@@ -100,6 +158,7 @@ const LoginScreen = () => {
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
+        autoCorrect={false}
       />
 
       <TextInput
@@ -111,8 +170,20 @@ const LoginScreen = () => {
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Ingresar</Text>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        disabled={loading} // Deshabilitar botón mientras carga
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="#f9f5f0" />
+        ) : (
+          <Text style={styles.buttonText}>Ingresar</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.registerLink}>
+        <Text style={styles.registerLinkText}>¿No tienes cuenta? Regístrate</Text>
       </TouchableOpacity>
     </View>
   );
@@ -135,7 +206,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '600',
     color: '#222',
-    marginBottom: 20,
+    marginBottom: 25,
   },
   input: {
     width: '100%',
@@ -143,23 +214,35 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 12,
-    padding: 12,
-    marginBottom: 15,
-    color: '#000',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 18,
+    fontSize: 16,
+    color: '#333',
   },
   button: {
     width: '100%',
     backgroundColor: '#222',
-    padding: 14,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 5,
+    marginTop: 10,
+    minHeight: 50, // Para que no cambie de tamaño con el ActivityIndicator
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#f9f5f0',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
   },
+  registerLink: {
+    marginTop: 25,
+  },
+  registerLinkText: {
+    fontSize: 15,
+    color: '#333',
+    textDecorationLine: 'underline',
+  }
 });
 
 export default LoginScreen;

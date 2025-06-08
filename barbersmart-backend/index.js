@@ -1,16 +1,19 @@
 const express = require('express');
+const cors = require('cors');
 const pool = require('./db'); // Importamos la conexión a la BD
 require('dotenv').config(); // Para cargar variables de entorno desde .env
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+app.use(cors());
 // MIDDLEWARES GLOBALES
 // --------------------
 
 // Middleware para parsear cuerpos de solicitud JSON
 app.use(express.json());
-
+app.use(cors({
+  origin: 'http://172.172.9.19:3000' // Cambia al dominio/IP del cliente si quieres restringir
+}));
 // Middleware para parsear cuerpos de solicitud URL-encoded (menos común para APIs JSON, pero no hace daño)
 app.use(express.urlencoded({extended: true}));
 
@@ -23,13 +26,19 @@ const styleRoutes = require('./routes/styleRoutes');
 const simulationRoutes = require('./routes/simulationRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 // Aquí importarías otros archivos de rutas (ej. appointmentRoutes, serviceRoutes, etc.)
+const serviceRoutes = require('./routes/serviceRoutes');
+const citasRoutes = require('./routes/citas.routes');; // <--- NUEVA IMPORTACIÓN
+// Aquí importarías otros archivos de rutas (ej. appointmentRoutes
+// , serviceRoutes, etc.)
 
 app.use('/api/auth', authRoutes); // Rutas para autenticación y perfil de usuario
-app.use('/api/barbershops', barbershopRoutes); // Rutas para barberías
+app.use('/api', barbershopRoutes); // Rutas para barberías
 app.use('/api/barbers', barberRoutes); // Rutas para perfiles de barberos
 app.use('/api/styles', styleRoutes);
 app.use('/api/simulations', simulationRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/servicios', serviceRoutes);
+app.use('/api/citas', citasRoutes);
 // app.use('/api/appointments', appointmentRoutes); // Ejemplo
 
 // RUTA DE PRUEBA DE CONEXIÓN A LA BASE DE DATOS Y ESTADO DEL SERVIDOR
