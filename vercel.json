@@ -6,8 +6,7 @@
       "use": "@vercel/node",
       "config": {
         "project": "barbersmart-backend"
-      },
-      "outputDirectory": "api"
+      }
     },
     {
       "src": "package.json",
