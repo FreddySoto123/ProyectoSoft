@@ -50,13 +50,9 @@ export type RootStackParamList = {
   };
   FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
   CitaScreen: {
-    // El nombre aquí es 'CitaScreen'
+    user: {id: number; name?: string; avatar?: string | null};
     barberiaId: number;
-    barberoId: number;
-    user: {
-      id: number;
-      nombre: string /* Ajusta el tipo de user según lo que pases */;
-    };
+    barberoId?: number;
   };
   AppointmentsScreen: {userId: number | string};
   AppointmentList: {userId: string};

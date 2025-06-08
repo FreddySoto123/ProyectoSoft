@@ -12,21 +12,32 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
 type RootStackParamList = {
-  Home: { userId: string; name: string };
-  Profile: { userId: string };
-  SelectBarbershop: undefined;
-  AppointmentsScreen: { userId: number };
-  ImageCaptureScreen: { userId: string };
-  CitaScreen: { user: { id: number; name: string; photo_url: string } };
-  FaceShapeScreen: { userId: string; currentFaceShape?: string | null };
+  Home: {userId: string; name: string};
+  Profile: {userId: string};
+  AppointmentsScreen: {userId: number};
+  ImageCaptureScreen: {userId: string};
+  CitaScreen: {
+    user: {
+      id: number;
+      name?: string;
+      avatar?: string | null;
+    };
+    barberiaId: number;
+    barberoId?: number;
+  };
+  FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
 };
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type HomeScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Home'
+>;
 type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
+const DEFAULT_BARBERSHOP_ID = 1;
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -38,8 +49,8 @@ const HomeScreen: React.FC = () => {
     {
       id: '1',
       title: 'Agendar una Cita',
-      screen: 'SelectBarbershop',
-      iconName: 'store-search-outline',
+      screen: 'CitaScreen',
+      iconName: 'calendar-plus',
     },
     {
       id: '2',
@@ -72,36 +83,40 @@ const HomeScreen: React.FC = () => {
 
     if (!userId) {
       Alert.alert('Error', 'No se pudo identificar al usuario.');
-      console.error(`HomeScreen: userId es undefined, no se puede navegar a ${screenName}`);
+      console.error(
+        `HomeScreen: userId es undefined, no se puede navegar a ${screenName}`,
+      );
       return;
     }
-
+    const numericUserId = Number(userId);
+    if (isNaN(numericUserId)) {
+      Alert.alert('Error', 'ID de usuario inválido.');
+      return;
+    }
     switch (screenName) {
       case 'FaceShapeScreen':
       case 'ImageCaptureScreen':
-        navigation.navigate(screenName, { userId });
+        navigation.navigate(screenName, {userId});
         break;
 
       case 'Profile':
-        navigation.navigate('Profile', { userId });
+        navigation.navigate('Profile', {userId});
         break;
 
-      case 'CitaScreen':
-        if (name) {
-          navigation.navigate('CitaScreen', {
-            user: {
-              id: Number(userId),
-              name: name,
-              photo_url: 'https://i.imgur.com/default-avatar.png',
-            },
-          });
-        } else {
-          Alert.alert('Error', 'No se pudo identificar el nombre del usuario.');
-        }
+      case 'CitaScreen': // <--- CASO ESPECÍFICO PARA AGENDAR CITA
+        navigation.navigate('CitaScreen', {
+          user: {
+            id: numericUserId,
+            name: name, // Pasa el nombre del usuario
+            // avatar: avatar // Pasa el avatar del usuario si CitaScreen lo necesita/muestra
+          },
+          barberiaId: DEFAULT_BARBERSHOP_ID, // ID de la barbería predeterminada
+          // barberoId: undefined, // O un ID de barbero predeterminado si quieres
+        });
         break;
 
       case 'AppointmentsScreen':
-        navigation.navigate('AppointmentsScreen', { userId: Number(userId) });
+        navigation.navigate('AppointmentsScreen', {userId: Number(userId)});
         break;
 
       default:
@@ -118,14 +133,13 @@ const HomeScreen: React.FC = () => {
         <TouchableOpacity
           onPress={() => {
             if (userId) {
-              navigation.navigate('Profile', { userId });
+              navigation.navigate('Profile', {userId});
             } else {
               Alert.alert('Error', 'No se pudo identificar al usuario.');
             }
-          }}
-        >
+          }}>
           <View style={styles.profileIconPlaceholder}>
-            <Text style={{ color: '#fff' }}>👤</Text>
+            <Text style={{color: '#fff'}}>👤</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -136,15 +150,16 @@ const HomeScreen: React.FC = () => {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.welcomeUserText}>¿Cómo estás, {name || 'Usuario'}?</Text>
+        <Text style={styles.welcomeUserText}>
+          ¿Cómo estás, {name || 'Usuario'}?
+        </Text>
 
         <View style={styles.menuGrid}>
           {menuItems.map(item => (
             <TouchableOpacity
               key={item.id}
               style={styles.menuCard}
-              onPress={() => handleMenuItemPress(item.screen, item.title)}
-            >
+              onPress={() => handleMenuItemPress(item.screen, item.title)}>
               <View style={styles.menuIconContainer}>
                 <Text style={styles.iconPlaceholder}>
                   {item.iconName.substring(0, 1).toUpperCase()}
@@ -220,7 +235,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
     minHeight: 160,
