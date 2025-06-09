@@ -1,11 +1,16 @@
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+// metro.config.js
+// ELIMINADA: const { getSentryExpoConfig } = require('@sentry/react-native/metro');
+const {getDefaultConfig} = require('expo/metro-config');
 
-/**
- * Metro configuration
- * https://reactnative.dev/docs/metro
- *
- * @type {import('@react-native/metro-config').MetroConfig}
- */
-const config = {};
+/** @type {import('expo/metro-config').MetroConfig} */
+const config = getDefaultConfig(__dirname, {
+  // Opciones adicionales de configuración de Metro para Expo pueden ir aquí si las necesitas.
+  // Por ejemplo:
+  // resolver: {
+  //   sourceExts: [...getDefaultConfig(__dirname).resolver.sourceExts, 'mjs', 'cjs'], // Si alguna dependencia los usa
+  // },
+});
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+// ELIMINADA: module.exports = getSentryExpoConfig(__dirname, config);
+// AHORA EXPORTA DIRECTAMENTE LA CONFIGURACIÓN DE EXPO:
+module.exports = config;

@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "vercel-build": "echo 'Backend build step (if any)... Done.'",
+    "vercel-build": "echo 'Backend setup complete (no compilation needed for JS).'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
