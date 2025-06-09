@@ -2,55 +2,49 @@
 
 const express = require('express');
 const cors = require('cors');
-const pool = require('./db'); // Importamos la conexión a la BD
-require('dotenv').config(); // Para cargar variables de entorno desde .env
+const pool = require('./db');
+require('dotenv').config();
 
 const app = express();
-// const PORT = process.env.PORT || 3001; // PORT será manejado por Vercel en producción
 
 // --- CONFIGURACIÓN DE CORS ---
-// Es mejor configurar CORS de forma más granular para producción
 const allowedOrigins = [
-  'http://localhost:8081', // Expo Go (o el puerto que uses para dev del frontend)
-  'http://localhost:3000', // Si usas otro puerto para dev web del frontend
+  'http://localhost:8081', // Expo Go
+  'http://localhost:19006', // Expo Web local (si usas este puerto)
+  // También puedes añadir tu puerto de desarrollo web local si es diferente, ej. http://localhost:3000
 ];
 if (process.env.VERCEL_URL) {
-  allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
+  allowedOrigins.push(`https://${process.env.VERCEL_URL}`); // El dominio del despliegue actual de Vercel
 }
 if (process.env.FRONTEND_PRODUCTION_URL) {
-  // Si tienes un dominio personalizado de producción
+  // Para un dominio personalizado de producción si lo tienes
   allowedOrigins.push(process.env.FRONTEND_PRODUCTION_URL);
 }
-// Para permitir todas las previews de Vercel de tu proyecto (si el nombre del proyecto es 'barbersmart')
-const vercelPreviewPattern = /^https:\/\/barbersmart-.*\.vercel\.app$/;
+const vercelPreviewPattern = /^https:\/\/barbersmart-.*\.vercel\.app$/; // Para previews de tu proyecto "barbersmart"
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Permite solicitudes sin 'origin' (ej. Postman, curl) O si el origen está en la lista/patrón
       if (
-        !origin ||
+        !origin || // Permite Postman, curl, etc.
         allowedOrigins.includes(origin) ||
         (origin && vercelPreviewPattern.test(origin))
       ) {
         callback(null, true);
       } else {
         console.warn(`CORS: Origen bloqueado -> ${origin}`);
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error(`El origen ${origin} no está permitido por CORS.`));
       }
     },
-    // methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Asegúrate de incluir OPTIONS para preflight
-    credentials: true,
+    credentials: true, // Si usas cookies o cabeceras de autorización que deban ser pasadas
   }),
 );
 
 // MIDDLEWARES GLOBALES
-// --------------------
-app.use(express.json()); // Middleware para parsear cuerpos de solicitud JSON
-app.use(express.urlencoded({extended: true})); // Descomentar si esperas datos form-urlencoded
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
-// RUTAS DE LA APLICACIÓN
-// --------------------
+// RUTAS DE LA APLICACIÓN (SIN EL PREFIJO /api/ AQUÍ)
 const authRoutes = require('./routes/auth');
 const barbershopRoutes = require('./routes/barbershopRoutes');
 const barberRoutes = require('./routes/barberRoutes');
@@ -58,37 +52,32 @@ const styleRoutes = require('./routes/styleRoutes');
 const simulationRoutes = require('./routes/simulationRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
-const citasRoutes = require('./routes/citas.routes'); // Parece que tenías dos referencias a citas/appointments
+// Si citas.routes.js es diferente a appointmentRoutes y realmente lo usas:
+// const citasRoutes = require('./routes/citas.routes');
 
-// Montaje de rutas
-app.use('/api/auth', authRoutes);
-app.use('/api/barbershops', barbershopRoutes); // Cambiado para consistencia (plural)
-app.use('/api/barbers', barberRoutes);
-app.use('/api/styles', styleRoutes);
-app.use('/api/simulations', simulationRoutes);
-app.use('/api/appointments', appointmentRoutes); // Usar este para todas las citas
-app.use('/api/services', serviceRoutes); // Cambiado para consistencia (plural)
-app.use('/api/citas', citasRoutes); // Comentado, ya que /api/appointments parece ser la principal
+// Montaje de rutas (sin el prefijo /api/)
+app.use('/auth', authRoutes);
+app.use('/barbershops', barbershopRoutes);
+app.use('/barbers', barberRoutes);
+app.use('/styles', styleRoutes);
+app.use('/simulations', simulationRoutes);
+app.use('/appointments', appointmentRoutes);
+app.use('/services', serviceRoutes);
+// Si usas citasRoutes para algo diferente:
+// app.use('/citas', citasRoutes);
 
-// RUTA DE PRUEBA DE CONEXIÓN A LA BASE DE DATOS Y ESTADO DEL SERVIDOR
-// -----------------------------------------------------------------
-app.get('/api', async (req, res) => {
+// RUTA DE ESTADO DE LA API (AHORA EN LA RAÍZ DEL CONTEXTO DEL BACKEND)
+// Será accesible a través de https://<tu-dominio>.vercel.app/api/
+app.get('/', async (req, res) => {
   try {
     const dbResult = await pool.query('SELECT NOW()');
-    console.log(
-      '✅ Conexión a PostgreSQL verificada. Hora BD:',
-      dbResult.rows[0].now,
-    );
     res.json({
-      message: 'API de BarberSmart está funcionando!',
+      message:
+        'API de BarberSmart (manejada por /barbersmart-backend/index.js) está funcionando!',
       databaseConnected: true,
       databaseTime: dbResult.rows[0].now,
     });
   } catch (error) {
-    console.error(
-      '❌ Error al conectar con PostgreSQL en /api:',
-      error.message,
-    );
     res.status(500).json({
       message: 'API funcionando, pero hay un problema con la BD.',
       databaseConnected: false,
@@ -98,10 +87,8 @@ app.get('/api', async (req, res) => {
 });
 
 // INICIAR EL SERVIDOR (Solo para desarrollo local)
-// -----------------
-// En Vercel, Vercel se encarga de iniciar el servidor a través del 'module.exports'.
-// Esta sección 'app.listen' no se ejecutará en Vercel.
 if (process.env.NODE_ENV !== 'production_vercel') {
+  // O usa una variable como VERCEL_ENV que Vercel sí establece
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(
@@ -124,5 +111,4 @@ if (process.env.NODE_ENV !== 'production_vercel') {
   });
 }
 
-// ¡IMPORTANTE PARA VERCEL! Exportar la app de Express.
 module.exports = app;
