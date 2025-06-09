@@ -10,26 +10,45 @@ const YOUR_APP_PUBLIC_URL = process.env.YOUR_APP_PUBLIC_URL; // Ej: https://tu-a
 // --- CREAR UNA NUEVA CITA ---
 const createAppointment = async (req, res) => {
   const {
-    usuario_id,
+    usuario_id, // Este es el ID del usuario cliente
     barberia_id,
+<<<<<<< HEAD
     barbero_id, // ID de la tabla 'barberos'
     fecha,
     hora,
     servicios,
+=======
+    barbero_id, // Este debe ser el usuario_id del barbero
+    fecha,
+    hora,
+    servicios, // Array de IDs de servicios
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
     monto_total,
     notas_cliente,
   } = req.body;
   console.log('BACKEND: Creando nueva cita con datos:', req.body);
 
+<<<<<<< HEAD
   if (!usuario_id) {
     return res.status(400).json({error: 'Falta el ID del usuario cliente.'});
+=======
+  // El usuario_id del cliente ya viene como 'usuario_id' en el body
+  if (!usuario_id) {
+    console.error(
+      'BACKEND createAppointment: Falta usuario_id (del cliente) en la solicitud.',
+    );
+    return res
+      .status(400)
+      .json({error: 'Falta el ID del usuario cliente en la solicitud.'});
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
   }
   if (
     !barberia_id ||
-    !barbero_id ||
+    !barbero_id || // Asegúrate que este es el users.id del barbero
     !fecha ||
     !hora ||
     !servicios ||
+<<<<<<< HEAD
     !Array.isArray(servicios) ||
     servicios.length === 0 ||
     monto_total === undefined ||
@@ -38,6 +57,21 @@ const createAppointment = async (req, res) => {
     return res
       .status(400)
       .json({error: 'Faltan datos requeridos o tienen formato incorrecto.'});
+=======
+    !Array.isArray(servicios) || // Verificar que servicios sea un array
+    servicios.length === 0 ||
+    monto_total === undefined || // Permitir monto_total 0 si es válido
+    typeof monto_total !== 'number'
+  ) {
+    console.error(
+      'BACKEND createAppointment: Faltan datos requeridos o tienen formato incorrecto.',
+      req.body,
+    );
+    return res.status(400).json({
+      error:
+        'Faltan datos requeridos o tienen formato incorrecto para crear la cita.',
+    });
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
   }
 
   const client = await pool.connect();
@@ -48,10 +82,14 @@ const createAppointment = async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, 'Pendiente', 'Pendiente', $7)
       RETURNING *;
     `;
+<<<<<<< HEAD
+=======
+    // Usar el usuario_id del cliente y el usuario_id del barbero
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
     const citaResult = await client.query(citaQuery, [
-      usuario_id,
+      usuario_id, // ID del usuario cliente
       barberia_id,
-      barbero_id,
+      barbero_id, // users.id del barbero
       fecha,
       hora,
       monto_total,
@@ -61,6 +99,7 @@ const createAppointment = async (req, res) => {
     console.log('BACKEND: Cita creada:', nuevaCita);
 
     const citaId = nuevaCita.id;
+    // Asegurarse que servicios_id en la tabla cita_servicios sea el ID del servicio
     for (const servicio_id of servicios) {
       await client.query(
         'INSERT INTO cita_servicios (cita_id, servicio_id) VALUES ($1, $2);',
@@ -81,17 +120,25 @@ const createAppointment = async (req, res) => {
       error.message,
       error.stack,
     );
+<<<<<<< HEAD
     res
       .status(500)
       .json({
         error: 'Error del servidor al crear la cita.',
         details: error.message,
       });
+=======
+    res.status(500).json({
+      error: 'Error del servidor al crear la cita.',
+      details: error.message,
+    });
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
   } finally {
     client.release();
   }
 };
 
+<<<<<<< HEAD
 // --- BARBERO ACTUALIZA ESTADO DE LA CITA ---
 const updateAppointmentStatusByBarber = async (req, res) => {
   const {citaId} = req.params;
@@ -102,19 +149,58 @@ const updateAppointmentStatusByBarber = async (req, res) => {
     return res.status(401).json({error: 'Barbero no autenticado.'});
   }
   if (
+=======
+// --- BARBERO ACTUALIZA ESTADO DE LA CITA (Aceptada, Rechazada, Completada) ---
+// Esta función ASUME que req.user.id existe y es el ID del barbero autenticado.
+// Si no hay autenticación, esta lógica de protección no funcionará.
+const updateAppointmentStatusByBarber = async (req, res) => {
+  const {citaId} = req.params;
+  const {nuevo_estado_cita} = req.body; // 'Aceptada', 'Rechazada', 'Completada', 'Cancelada_Barbero'
+
+  // Si no hay sistema de autenticación, req.user será undefined.
+  // Necesitarías pasar el ID del barbero de otra forma y validar su autenticidad,
+  // o eliminar esta verificación si la lógica de negocio lo permite (no recomendado para acciones de barbero).
+  // Por ahora, lo dejaré como si esperara req.user, pero ten en cuenta que fallará si no existe.
+  const barberoAutenticadoId = req.user?.id;
+
+  if (!barberoAutenticadoId) {
+    // Esta verificación fallará si no hay autenticación configurada
+    console.warn(
+      'BACKEND updateAppointmentStatusByBarber: Intento de actualizar sin barbero autenticado (req.user.id no encontrado).',
+    );
+    return res.status(401).json({
+      error: 'Barbero no autenticado. Esta acción requiere autenticación.',
+    });
+  }
+
+  console.log(
+    `BACKEND: Barbero ID ${barberoAutenticadoId} actualizando cita ID ${citaId} a estado: ${nuevo_estado_cita}`,
+  );
+
+  if (
+    !nuevo_estado_cita ||
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
     !['Aceptada', 'Rechazada', 'Completada', 'Cancelada_Barbero'].includes(
       nuevo_estado_cita,
     )
   ) {
+<<<<<<< HEAD
     return res.status(400).json({error: 'Estado de cita inválido.'});
   }
   console.log(
     `BACKEND: Barbero (usuario ID ${barberoAutenticadoUsuarioId}) actualizando cita ${citaId} a ${nuevo_estado_cita}`,
   );
+=======
+    return res
+      .status(400)
+      .json({error: 'Estado de cita inválido proporcionado.'});
+  }
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+<<<<<<< HEAD
     const citaCheckQuery = `
         SELECT b.usuario_id AS barbero_usuario_id_en_cita
         FROM citas c
@@ -131,12 +217,25 @@ const updateAppointmentStatusByBarber = async (req, res) => {
       String(citaCheckResult.rows[0].barbero_usuario_id_en_cita) !==
       String(barberoAutenticadoUsuarioId)
     ) {
+=======
+    // Verificar que la cita pertenece al barbero (usa el barbero_id almacenado en la cita, que debe ser el users.id del barbero)
+    const citaCheckQuery = 'SELECT barbero_id FROM citas WHERE id = $1';
+    const citaCheck = await client.query(citaCheckQuery, [citaId]);
+
+    if (citaCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({error: 'Cita no encontrada.'});
+    }
+    // barbero_id en la tabla citas es el users.id del barbero
+    if (String(citaCheck.rows[0].barbero_id) !== String(barberoAutenticadoId)) {
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
       await client.query('ROLLBACK');
       return res
         .status(403)
         .json({error: 'No autorizado para modificar esta cita.'});
     }
 
+<<<<<<< HEAD
     const result = await client.query(
       'UPDATE citas SET estado_de_cita = $1, updated_at = NOW() WHERE id = $2 RETURNING *;',
       [nuevo_estado_cita, citaId],
@@ -151,6 +250,24 @@ const updateAppointmentStatusByBarber = async (req, res) => {
     res.json({
       message: `Cita ${nuevo_estado_cita.toLowerCase()}.`,
       appointment: result.rows[0],
+=======
+    const query = `UPDATE citas SET estado_de_cita = $1, updated_at = NOW() WHERE id = $2 RETURNING *;`;
+    const result = await client.query(query, [nuevo_estado_cita, citaId]);
+
+    if (result.rows.length === 0) {
+      // Por si acaso, aunque la verificación anterior debería cubrirlo
+      await client.query('ROLLBACK');
+      return res
+        .status(404)
+        .json({error: 'Cita no encontrada después de intentar actualizar.'});
+    }
+    const updatedCita = result.rows[0];
+
+    await client.query('COMMIT');
+    res.json({
+      message: `Cita ${nuevo_estado_cita.toLowerCase()}.`,
+      appointment: updatedCita,
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
     });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -159,29 +276,56 @@ const updateAppointmentStatusByBarber = async (req, res) => {
       error.message,
       error.stack,
     );
+<<<<<<< HEAD
     res
       .status(500)
       .json({
         error: 'Error al actualizar estado de la cita.',
         details: error.message,
       });
+=======
+    res.status(500).json({
+      error: 'Error del servidor al actualizar estado de la cita.',
+      details: error.message,
+    });
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
   } finally {
     client.release();
   }
 };
 
+<<<<<<< HEAD
 // --- CLIENTE OBTIENE URL DE PAGO DE LIBÉLULA ---
 const getLibelulaPaymentUrlForAppointment = async (req, res) => {
   const {citaId} = req.params;
   const {ci_cliente_form, nit_cliente_form} = req.body;
 
   if (!LIBELULA_API_KEY || !YOUR_APP_PUBLIC_URL) {
+=======
+// --- CLIENTE OBTIENE URL DE PAGO DE LIBÉLULA PARA UNA CITA ACEPTADA (SIN AUTENTICACIÓN DIRECTA EN ESTE ENDPOINT) ---
+const getLibelulaPaymentUrlForAppointment = async (req, res) => {
+  const {citaId} = req.params; // ID de la cita desde la URL
+  // MODIFICADO: Ya no esperamos razon_social_form del body
+  const {ci_cliente_form, nit_cliente_form} = req.body; // Datos del formulario del cliente
+
+  if (!LIBELULA_API_KEY || !YOUR_APP_PUBLIC_URL) {
+    // ... (manejo de error igual)
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
     return res.status(500).json({error: 'Servicio de pagos no configurado.'});
   }
   if (!citaId) {
     return res.status(400).json({error: 'Falta el ID de la cita.'});
   }
+<<<<<<< HEAD
   if (!(ci_cliente_form || nit_cliente_form)) {
+=======
+
+  // MODIFICADO: Solo validamos CI o NIT
+  if (!(ci_cliente_form || nit_cliente_form)) {
+    console.error(
+      'BACKEND: getLibelulaPaymentUrlForAppointment - Faltan datos del formulario: CI/NIT.',
+    );
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
     return res.status(400).json({error: 'Se requiere CI o NIT para el pago.'});
   }
 
@@ -193,7 +337,11 @@ const getLibelulaPaymentUrlForAppointment = async (req, res) => {
   try {
     const citaDetailsQuery = `
       SELECT c.id, c.usuario_id, c.monto_total, c.estado_de_cita, c.estado_pago,
+<<<<<<< HEAD
              u.email AS email_cliente, u.name AS nombre_cliente, -- Nombre completo del usuario
+=======
+             u.email AS email_cliente, u.name AS nombre_cliente,
+>>>>>>> 86c19e27edaee75b566925ff0c24c185cf8c6854
              (SELECT COALESCE(ARRAY_AGG(json_build_object('concepto', s.nombre, 'cantidad', 1, 'costo_unitario', s.precio, 'codigo_producto', s.id::text)), '{}')
               FROM cita_servicios cs JOIN servicios s ON cs.servicio_id = s.id WHERE cs.cita_id = c.id) AS lineas_detalle_obj
       FROM citas c
@@ -471,6 +619,7 @@ const getUserAppointments = async (req, res) => {
       })),
     );
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error(
       'BACKEND getUserAppointments CATCH:',
       error.message,
