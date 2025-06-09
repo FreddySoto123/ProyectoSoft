@@ -17,6 +17,7 @@ import ImageCaptureScreen from '../simulation/ImageCaptureScreen';
 import HairstyleSelectionScreen from '../simulation/HairstyleSelectionScreen';
 import SimulationResultScreen from '../simulation/SimulationResultScreen';
 import AppointmentDetailScreen from '../AppointmentDetailScreen';
+import PaymentDataEntryScreen from '../PaymentDataEntryScreen';
 import BarberAppointmentDetailScreen from '../BarberAppointmentDetailScreen';
 import CitaScreen from '../CitaScreen'; // Asegúrate que la importación es correcta
 import AppointmentsScreen from '../AppointmentsScreen';
@@ -58,6 +59,7 @@ export type RootStackParamList = {
   AppointmentList: {userId: string};
   BarberAppointmentList: {barberUserId: string};
   AppointmentDetail: {cita: CitaConDetalles};
+  PaymentDataEntry: {cita: AppointmentFromBackend};
   BarberAppointmentDetail: {cita: CitaParaBarbero; onGoBack?: () => void};
 };
 
@@ -176,6 +178,11 @@ const AuthNavigator = () => (
         name="ResetPassword"
         component={ResetPasswordScreen}
         options={{title: 'Nueva Contraseña'}}
+      />
+      <Stack.Screen
+        name="PaymentDataEntry"
+        component={PaymentDataEntryScreen}
+        options={{title: 'Datos para el Pago'}}
       />
     </Stack.Navigator>
   </NavigationContainer>

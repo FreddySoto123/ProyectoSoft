@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "vercel-build": "echo 'Backend setup complete (no compilation needed for JS).'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
