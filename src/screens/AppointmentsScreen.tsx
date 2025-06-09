@@ -21,7 +21,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
 // --- CONFIGURACIÓN DE API ---
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3001/api'; // Ajusta para tu emulador/dispositivo
+  process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3001/api';
 
 export type RootStackParamList = {
   AppointmentsScreen: {userId: number | string; refresh?: boolean};
@@ -40,8 +40,8 @@ type AppointmentsScreenNavigationProp = NativeStackNavigationProp<
 
 export interface AppointmentFromBackend {
   id: number;
-  fecha: string; // Esperado como 'YYYY-MM-DD'
-  hora: string; // Esperado como 'HH:MM:SS' o 'HH:MM'
+  fecha: string;
+  hora: string;
   nombre_barberia: string;
   nombre_barbero: string;
   servicios_nombres: string;
@@ -57,16 +57,13 @@ export interface AppointmentFromBackend {
   libelula_transaction_id?: string;
   libelula_qr_url?: string;
   qr_para_pago?: string;
-  // Podrías añadir el avatar del barbero si lo necesitas aquí
   avatar_barbero?: string;
 }
 
-// Función auxiliar para parsear la fecha de forma segura
 const parseAppointmentDate = (
   fechaStr: string,
   horaStr: string,
 ): Date | null => {
-  // Asegurarse que fechaStr es YYYY-MM-DD y horaStr es HH:MM:SS o HH:MM
   if (!fechaStr || !horaStr) return null;
 
   const dateParts = fechaStr.split('-');
@@ -75,7 +72,7 @@ const parseAppointmentDate = (
   if (dateParts.length !== 3 || timeParts.length < 2) return null;
 
   const year = parseInt(dateParts[0], 10);
-  const month = parseInt(dateParts[1], 10) - 1; // Meses en JS son 0-indexados
+  const month = parseInt(dateParts[1], 10) - 1;
   const day = parseInt(dateParts[2], 10);
   const hour = parseInt(timeParts[0], 10);
   const minute = parseInt(timeParts[1], 10);
@@ -92,9 +89,6 @@ const parseAppointmentDate = (
     return null;
   }
 
-  // Crear fecha en UTC para evitar problemas de zona horaria al parsear, luego se mostrará en local
-  // return new Date(Date.UTC(year, month, day, hour, minute, second));
-  // O si las fechas/horas del backend se asumen que ya están en la zona horaria deseada (local del servidor/usuario):
   return new Date(year, month, day, hour, minute, second);
 };
 
@@ -209,25 +203,33 @@ const AppointmentsScreen: React.FC = () => {
     } else Alert.alert('Error', 'Usuario no identificado.');
   };
 
+  const userIdDelClienteActual = route.params?.userId;
+
   const navigateToDetail = (cita: AppointmentFromBackend) => {
-    navigation.navigate('AppointmentDetail', {cita});
+    if (!userIdDelClienteActual) {
+      Alert.alert(
+        'Error',
+        'No se pudo identificar al usuario actual para ver los detalles.',
+      );
+      return;
+    }
+    navigation.navigate('AppointmentDetail', {
+      cita: cita,
+      userId: userIdDelClienteActual,
+    });
   };
 
   const renderItem = ({item}: {item: AppointmentFromBackend}) => {
-    // Depuración de la fecha para mostrar
-    // console.log(`RenderItem: id=${item.id}, fecha='${item.fecha}', hora='${item.hora}'`);
 
     let displayDate = 'Fecha inválida';
     if (item.fecha) {
-      // El formato YYYY-MM-DD es interpretado como UTC por new Date(string) si no se especifica más.
-      // Para asegurar que se trate como fecha local, es mejor parsear los componentes.
       const dateParts = item.fecha.split('-');
       if (dateParts.length === 3) {
         const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // JS months are 0-indexed
+        const month = parseInt(dateParts[1], 10) - 1;
         const day = parseInt(dateParts[2], 10);
         if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
-          const d = new Date(year, month, day); // Crea la fecha con la hora 00:00:00 en la zona local
+          const d = new Date(year, month, day);
           displayDate = d.toLocaleDateString('es-ES', {
             year: 'numeric',
             month: 'long',
@@ -401,7 +403,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#222',
     paddingVertical: 10,
     paddingHorizontal: 25,
     borderRadius: 20,
@@ -471,7 +473,7 @@ const styles = StyleSheet.create({
   paymentFailed: {backgroundColor: '#ef9a9a', color: '#b71c1c'},
   actionButton: {
     marginTop: 15,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#222',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',

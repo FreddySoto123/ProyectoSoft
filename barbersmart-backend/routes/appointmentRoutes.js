@@ -12,6 +12,7 @@ const {
   getLibelulaPaymentUrlForAppointment,
   libelulaPaymentCallback,
   confirmManualPaymentByBarber,
+  cancelAppointmentByClient,
 } = require('../controllers/appointmentController');
 
 // Todas las rutas de citas podrían requerir autenticación
@@ -47,5 +48,6 @@ router.put(
   '/:citaId/confirm-manual-payment',
   /*verifyToken,*/ confirmManualPaymentByBarber,
 );
-
+// PUT /api/appointments/:citaId/cancel-by-client - Cliente cancela su cita
+router.put('/:citaId/cancel-by-client', cancelAppointmentByClient);
 module.exports = router;

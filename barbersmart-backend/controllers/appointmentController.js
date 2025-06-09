@@ -82,12 +82,10 @@ const createAppointment = async (req, res) => {
       error.message,
       error.stack,
     );
-    res
-      .status(500)
-      .json({
-        error: 'Error del servidor al crear la cita.',
-        details: error.message,
-      });
+    res.status(500).json({
+      error: 'Error del servidor al crear la cita.',
+      details: error.message,
+    });
   } finally {
     client.release();
   }
@@ -160,12 +158,10 @@ const updateAppointmentStatusByBarber = async (req, res) => {
       error.message,
       error.stack,
     );
-    res
-      .status(500)
-      .json({
-        error: 'Error al actualizar estado de la cita.',
-        details: error.message,
-      });
+    res.status(500).json({
+      error: 'Error al actualizar estado de la cita.',
+      details: error.message,
+    });
   } finally {
     client.release();
   }
@@ -313,12 +309,10 @@ const getLibelulaPaymentUrlForAppointment = async (req, res) => {
       error.message,
       error.stack,
     );
-    res
-      .status(500)
-      .json({
-        error: 'Error del servidor al procesar el pago.',
-        details: error.message,
-      });
+    res.status(500).json({
+      error: 'Error del servidor al procesar el pago.',
+      details: error.message,
+    });
   }
 };
 
@@ -478,12 +472,10 @@ const getUserAppointments = async (req, res) => {
       error.message,
       error.stack,
     );
-    res
-      .status(500)
-      .json({
-        error: 'Error del servidor al obtener las citas del usuario.',
-        details: error.message,
-      });
+    res.status(500).json({
+      error: 'Error del servidor al obtener las citas del usuario.',
+      details: error.message,
+    });
   }
 };
 
@@ -524,12 +516,10 @@ const getBarberAppointments = async (req, res) => {
       error.message,
       error.stack,
     );
-    res
-      .status(500)
-      .json({
-        error: 'Error del servidor al obtener las citas del barbero.',
-        details: error.message,
-      });
+    res.status(500).json({
+      error: 'Error del servidor al obtener las citas del barbero.',
+      details: error.message,
+    });
   }
 };
 
@@ -577,11 +567,9 @@ const confirmManualPaymentByBarber = async (req, res) => {
     );
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
-      return res
-        .status(409)
-        .json({
-          error: 'No se pudo actualizar el pago (ya pagada o no encontrada).',
-        });
+      return res.status(409).json({
+        error: 'No se pudo actualizar el pago (ya pagada o no encontrada).',
+      });
     }
     await client.query('COMMIT');
     res.json({
@@ -602,6 +590,89 @@ const confirmManualPaymentByBarber = async (req, res) => {
     client.release();
   }
 };
+const cancelAppointmentByClient = async (req, res) => {
+  const {citaId} = req.params;
+  const {userId} = req.body; // ID del cliente que intenta cancelar, enviado desde el frontend
+
+  if (!userId) {
+    return res
+      .status(400)
+      .json({error: 'Falta el ID del usuario para la cancelación.'});
+  }
+  if (!citaId) {
+    return res
+      .status(400)
+      .json({error: 'Falta el ID de la cita para la cancelación.'});
+  }
+
+  console.log(
+    `BACKEND: Cliente (usuario ID ${userId}) intentando cancelar cita ID ${citaId}`,
+  );
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const citaCheckQuery =
+      'SELECT usuario_id, estado_de_cita, estado_pago FROM citas WHERE id = $1';
+    const citaCheckResult = await client.query(citaCheckQuery, [citaId]);
+
+    if (citaCheckResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({error: 'Cita no encontrada.'});
+    }
+
+    const cita = citaCheckResult.rows[0];
+
+    if (String(cita.usuario_id) !== String(userId)) {
+      await client.query('ROLLBACK');
+      return res
+        .status(403)
+        .json({error: 'No autorizado para cancelar esta cita.'});
+    }
+
+    if (cita.estado_pago === 'Pagado') {
+      await client.query('ROLLBACK');
+      return res
+        .status(400)
+        .json({error: 'No se puede cancelar una cita que ya ha sido pagada.'});
+    }
+    if (!['Pendiente', 'Aceptada'].includes(cita.estado_de_cita)) {
+      await client.query('ROLLBACK');
+      return res
+        .status(400)
+        .json({
+          error: `No se puede cancelar una cita en estado '${cita.estado_de_cita}'.`,
+        });
+    }
+
+    const nuevoEstado = 'Cancelada_Cliente';
+    const updateQuery =
+      'UPDATE citas SET estado_de_cita = $1, updated_at = NOW() WHERE id = $2 RETURNING *;';
+    const updateResult = await client.query(updateQuery, [nuevoEstado, citaId]);
+
+    await client.query('COMMIT');
+    res.json({
+      message: 'Cita cancelada exitosamente por el cliente.',
+      appointment: updateResult.rows[0],
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(
+      'BACKEND cancelAppointmentByClient CATCH:',
+      error.message,
+      error.stack,
+    );
+    res
+      .status(500)
+      .json({
+        error: 'Error del servidor al cancelar la cita.',
+        details: error.message,
+      });
+  } finally {
+    client.release();
+  }
+};
 
 module.exports = {
   createAppointment,
@@ -611,4 +682,5 @@ module.exports = {
   getLibelulaPaymentUrlForAppointment,
   libelulaPaymentCallback,
   confirmManualPaymentByBarber,
+  cancelAppointmentByClient,
 };

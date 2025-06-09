@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#222',
     paddingVertical: 14,
     paddingHorizontal: 30,
     borderRadius: 25,

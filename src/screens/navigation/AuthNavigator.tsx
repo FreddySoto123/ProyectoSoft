@@ -55,10 +55,10 @@ export type RootStackParamList = {
     barberiaId: number;
     barberoId?: number;
   };
-  AppointmentsScreen: {userId: number | string};
+  AppointmentsScreen: {userId: number | string; refresh?: boolean};
   AppointmentList: {userId: string};
   BarberAppointmentList: {barberUserId: string};
-  AppointmentDetail: {cita: CitaConDetalles};
+  AppointmentDetail: {cita: CitaConDetalles; userId: string | number};
   PaymentDataEntry: {cita: AppointmentFromBackend};
   BarberAppointmentDetail: {cita: CitaParaBarbero; onGoBack?: () => void};
 };

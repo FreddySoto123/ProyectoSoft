@@ -450,14 +450,14 @@ const styles = StyleSheet.create({
   },
   buttonText: {color: 'white', fontSize: 15, fontWeight: '500'}, // Reducido el texto del botón
   nextButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#222',
     paddingVertical: 15,
     borderRadius: 25,
     width: '95%', // Ligeramente más ancho
     alignItems: 'center',
     elevation: 2,
   },
-  nextButtonDisabled: {backgroundColor: '#a0c7ff'}, // Un azul más claro para deshabilitado
+  nextButtonDisabled: {backgroundColor: '#929292'}, // Un azul más claro para deshabilitado
   nextButtonText: {color: 'white', fontSize: 17, fontWeight: 'bold'},
   cameraControls: {
     position: 'absolute',
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     // Botones en la pantalla de permiso denegado
-    backgroundColor: '#007AFF',
+    backgroundColor: '#222',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,

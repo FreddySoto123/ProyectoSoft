@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   container: {
     paddingBottom: 30,
     paddingHorizontal: 15,
-    backgroundColor: '#f4f6f8',
+    backgroundColor: '#F4F0E8',
     flexGrow: 1,
   },
   centered: {
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   confirmButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#222',
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',

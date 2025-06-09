@@ -20,10 +20,9 @@ import {useRoute, RouteProp, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-// ... (Definiciones de AppointmentFromBackend, RootStackParamList y API_BASE_URL como antes) ...
 interface AppointmentFromBackend {
   id: number;
-  usuario_id: number | string; // ID del usuario cliente
+  usuario_id: number | string;
   fecha: string;
   hora: string;
   monto_total: string | number;
@@ -72,7 +71,7 @@ const PaymentDataEntryScreen: React.FC = () => {
   const [ci, setCi] = useState(cita.ci_cliente || '');
   const [nit, setNit] = useState(cita.nit_cliente || '');
 
-  const [isProcessing, setIsProcessing] = useState(false); // Para la generación del enlace
+  const [isProcessing, setIsProcessing] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null);
   const [libelulaTransactionId, setLibelulaTransactionId] = useState<
@@ -82,8 +81,7 @@ const PaymentDataEntryScreen: React.FC = () => {
   const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
-    navigation.setOptions({title: `Pago Cita #${cita.id}`});
-    // Si la cita ya tiene URLs de pago (ej. si el usuario vuelve a esta pantalla)
+    navigation.setOptions({title: `Pago Cita`});
     if (cita.libelula_payment_url) setPaymentUrl(cita.libelula_payment_url);
     if (cita.libelula_qr_url) setPaymentQrUrl(cita.libelula_qr_url);
     if (cita.libelula_transaction_id)
@@ -97,8 +95,6 @@ const PaymentDataEntryScreen: React.FC = () => {
     }
 
     setIsProcessing(true);
-    // No reseteamos paymentUrl aquí para que el botón de "Abrir pasarela" siga visible si ya se generó
-    // setPaymentUrl(null); setPaymentQrUrl(null); setLibelulaTransactionId(null);
     console.log(
       `FRONTEND (PaymentDataEntry): Solicitando URL de pago para cita ID: ${cita.id}`,
     );
@@ -139,10 +135,9 @@ const PaymentDataEntryScreen: React.FC = () => {
       );
 
       if (data.paymentUrl) {
-        setPaymentUrl(data.paymentUrl); // Establecer la URL para el botón y el WebView
+        setPaymentUrl(data.paymentUrl);
         if (data.qrUrl) setPaymentQrUrl(data.qrUrl);
         if (data.transactionId) setLibelulaTransactionId(data.transactionId);
-        // NO abrimos el WebView automáticamente, el usuario lo hará con el botón
         Alert.alert(
           'Enlace Generado',
           "El enlace de pago y/o QR están listos. Presiona 'Abrir Pasarela de Pago' para continuar.",
@@ -167,7 +162,7 @@ const PaymentDataEntryScreen: React.FC = () => {
 
   const handleOpenWebView = () => {
     if (paymentUrl) {
-      setShowWebView(true); // Ahora el botón activa el WebView
+      setShowWebView(true);
     } else {
       Alert.alert('Enlace no disponible', 'Primero genera el enlace de pago.');
     }
@@ -179,7 +174,6 @@ const PaymentDataEntryScreen: React.FC = () => {
 
     if (url.startsWith(DEEP_LINK_SCHEME)) {
       setShowWebView(false);
-      // ... (lógica de manejo de deep link y navegación igual que antes)
       if (
         url.includes(PAYMENT_SUCCESS_PATH) ||
         url.includes('status=paid') ||
@@ -273,7 +267,6 @@ const PaymentDataEntryScreen: React.FC = () => {
                 />
               </View>
 
-              {/* Botón para generar el enlace o QR si aún no se ha hecho */}
               {!paymentUrl && (
                 <TouchableOpacity
                   style={[styles.actionButton, styles.generatePaymentButton]}
@@ -290,8 +283,7 @@ const PaymentDataEntryScreen: React.FC = () => {
               )}
             </View>
 
-            {/* Sección para mostrar el enlace y QR generados */}
-            {paymentUrl && ( // Mostrar esta sección si paymentUrl existe
+            {paymentUrl && (
               <View style={[styles.card, styles.paymentResultSection]}>
                 <Text style={styles.cardTitle}>¡Listo para Pagar!</Text>
                 {libelulaTransactionId && (
@@ -300,10 +292,10 @@ const PaymentDataEntryScreen: React.FC = () => {
                   </Text>
                 )}
 
-                <TouchableOpacity // BOTÓN PARA ABRIR EL WEBVIEW
+                <TouchableOpacity
                   style={[styles.actionButton, styles.payOnlineButton]}
-                  onPress={handleOpenWebView} // Llama a la función para mostrar el WebView
-                  disabled={isProcessing} // Podrías deshabilitarlo si isProcessing es true
+                  onPress={handleOpenWebView}
+                  disabled={isProcessing}
                 >
                   <MaterialIcons
                     name="open-in-new"
@@ -363,7 +355,6 @@ const PaymentDataEntryScreen: React.FC = () => {
           </>
         )}
 
-        {/* Modal o Vista para el WebView */}
         {showWebView && paymentUrl && (
           <Modal
             visible={showWebView}
@@ -404,13 +395,9 @@ const PaymentDataEntryScreen: React.FC = () => {
                     'No se pudo cargar la pasarela. Verifica tu conexión.',
                   );
                 }}
-                // Importante para iOS para permitir la navegación fuera del dominio inicial si es necesario
-                // y para manejar redirecciones correctamente.
+
                 originWhitelist={['*']}
-                // Para Android, esto puede ayudar con ciertas redirecciones o si la pasarela usa pop-ups.
-                // domStorageEnabled={true}
-                // javaScriptEnabled={true}
-                // thirdPartyCookiesEnabled={true} // Si la pasarela depende de cookies de terceros
+
               />
             </SafeAreaView>
           </Modal>
@@ -420,7 +407,6 @@ const PaymentDataEntryScreen: React.FC = () => {
   );
 };
 
-// ... (Estilos iguales que antes, asegúrate de tenerlos todos)
 const styles = StyleSheet.create({
   safeArea: {flex: 1, backgroundColor: '#f4f6f8'},
   screenContainer: {flex: 1, backgroundColor: '#f4f6f8'},
@@ -472,17 +458,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionButtonText: {color: '#fff', fontSize: 16, fontWeight: 'bold'},
-  generatePaymentButton: {backgroundColor: '#007bff', marginTop: 10},
+  generatePaymentButton: {backgroundColor: '#222', marginTop: 10},
   paymentResultSection: {
     borderColor: '#28a745',
-    borderWidth: 0 /* Quitado borde verde */,
+    borderWidth: 0,
   },
   payOnlineButton: {backgroundColor: '#28a745', marginBottom: 15},
-  checkPaymentStatusButton: {backgroundColor: '#6c757d'},
+  checkPaymentStatusButton: {backgroundColor: '#222'},
   qrSection: {
     borderColor: '#17a2b8',
     borderWidth: 0,
-    marginTop: 0 /* Ajustes para QR */,
+    marginTop: 0,
   },
   qrContainer: {alignItems: 'center', marginTop: 15, paddingVertical: 10},
   qrLabel: {fontSize: 15, color: '#333', marginBottom: 10, textAlign: 'center'},
@@ -506,7 +492,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
-    paddingVertical: Platform.OS === 'ios' ? 10 : 12, // Ajuste para iOS
+    paddingVertical: Platform.OS === 'ios' ? 10 : 12,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     backgroundColor: '#f8f8f8',
@@ -514,7 +500,7 @@ const styles = StyleSheet.create({
   webViewCloseButton: {padding: 5},
   webViewTitle: {fontSize: 17, fontWeight: '600', color: '#333'},
   webView: {flex: 1},
-  webViewLoading: {position: 'absolute', left: 0, right: 0, top: '45%'}, // Centrado
+  webViewLoading: {position: 'absolute', left: 0, right: 0, top: '45%'},
 });
 
 export default PaymentDataEntryScreen;

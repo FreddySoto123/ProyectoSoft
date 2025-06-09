@@ -18,21 +18,18 @@ import {
 } from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
-// --- CONFIGURACIÓN DE API --- (Asegúrate que sea la misma que en AppointmentsScreen)
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3001/api';
 
-// Tipos para navegación y parámetros
 export type RootStackParamList = {
   AppointmentsScreen: {userId: number | string; refresh?: boolean};
   AppointmentDetail: {cita: AppointmentFromBackend; userId?: string | number};
-  PaymentDataEntry: {cita: AppointmentFromBackend}; // Nueva pantalla para datos de pago
-  // ... otras rutas ...
+  PaymentDataEntry: {cita: AppointmentFromBackend};
 };
 
-// Interfaz de la cita (misma que antes)
 export interface AppointmentFromBackend {
   id: number;
+  usuario_id: number | string;
   fecha: string;
   hora: string;
   monto_total: string | number;
@@ -49,10 +46,9 @@ export interface AppointmentFromBackend {
   nombre_barbero: string;
   servicios_nombres: string;
   notas_cliente?: string | null;
-  libelula_transaction_id?: string; // Estos podrían ya no ser necesarios aquí si se manejan en la siguiente pantalla
+  libelula_transaction_id?: string;
   libelula_payment_url?: string;
   libelula_qr_url?: string;
-  // qr_para_pago?: string; // Puede que ya no sea necesario si el QR se muestra en la siguiente pantalla
 }
 
 type AppointmentDetailScreenRouteProp = RouteProp<
@@ -68,25 +64,19 @@ const AppointmentDetailScreen: React.FC = () => {
   const route = useRoute<AppointmentDetailScreenRouteProp>();
   const navigation = useNavigation<AppointmentDetailScreenNavigationProp>();
 
-  const {cita: initialCita, userId} = route.params || {};
+  const {cita: initialCita, userId: clienteUserId} = route.params || {};
 
   const [citaActual, setCitaActual] = useState<AppointmentFromBackend | null>(
     initialCita || null,
   );
-  const [isLoading, setIsLoading] = useState(false); // Para la acción de cancelar
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Simulación de recarga de cita, en un caso real llamarías a tu API
   const refreshCitaData = async (citaId: number) => {
     setIsLoading(true);
     console.log(
       `Intentando refrescar datos para la cita ID: ${citaId} (simulado)`,
     );
-    // En una app real:
-    // const freshCita = await fetchCitaByIdFromApi(citaId);
-    // setCitaActual(freshCita);
-    // Por ahora, para simular que la lista de citas se actualizó y nos pasó una nueva initialCita:
     if (initialCita && initialCita.id === citaId) {
-      // Si la prop initialCita se actualiza, useEffect la tomará
       console.log('Usando initialCita actualizada para el refresco.');
       setCitaActual(initialCita);
     } else {
@@ -113,12 +103,8 @@ const AppointmentDetailScreen: React.FC = () => {
         console.log(
           `AppointmentDetailScreen - Enfocada, verificando cita ${citaActual.id}`,
         );
-        // Si tenemos un `userId`, podríamos forzar una recarga de la lista de AppointmentsScreen
-        // y esperar que `initialCita` se actualice a través de la navegación.
-        // O, si tenemos un endpoint para obtener una cita por ID:
-        // refreshCitaData(citaActual.id);
       }
-    }, [citaActual?.id]), // No incluir refreshCitaData aquí para evitar bucles si no es memoizada correctamente
+    }, [citaActual?.id]),
   );
 
   const handleProceedToPayment = () => {
@@ -128,6 +114,24 @@ const AppointmentDetailScreen: React.FC = () => {
 
   const handleCancelAppointmentByClient = async () => {
     if (!citaActual || isLoading) return;
+
+    // Verificar si el clienteUserId está disponible (debería venir de route.params)
+    if (!clienteUserId) {
+      Alert.alert(
+        'Error',
+        'No se pudo identificar al usuario para esta acción.',
+      );
+      return;
+    }
+
+    if (String(citaActual.usuario_id) !== String(clienteUserId)) {
+      Alert.alert(
+        'No permitido',
+        'No puedes cancelar una cita que no te pertenece.',
+      );
+      return;
+    }
+
     if (!['Pendiente', 'Aceptada'].includes(citaActual.estado_de_cita)) {
       Alert.alert(
         'No permitido',
@@ -153,29 +157,41 @@ const AppointmentDetailScreen: React.FC = () => {
           onPress: async () => {
             setIsLoading(true);
             try {
-              // ASUME QUE TIENES UN ENDPOINT ASÍ Y AUTENTICACIÓN DE CLIENTE
-              // const response = await fetch(`${API_BASE_URL}/appointments/${citaActual.id}/cancel-by-client`, {
-              //   method: 'PUT',
-              //   headers: { 'Content-Type': 'application/json', /* 'Authorization': 'Bearer TOKEN_CLIENTE' */ },
-              // });
-              // const data = await response.json();
-              // if (response.ok && data.appointment) {
-              //   setCitaActual(data.appointment); // Actualiza la cita local
-              //   Alert.alert("Éxito", "Cita cancelada.");
-              //   // Opcional: notificar a la pantalla anterior para refrescar
-              //   if (userId) navigation.navigate('AppointmentsScreen', {userId, refresh: true});
-              //   else if (navigation.canGoBack()) navigation.goBack();
-              // } else {
-              //   Alert.alert("Error", data.error || "No se pudo cancelar la cita.");
-              // }
-              Alert.alert(
-                'Funcionalidad Pendiente',
-                'La cancelación por cliente aún no está implementada en el backend.',
+              const response = await fetch(
+                `${API_BASE_URL}/appointments/${citaActual.id}/cancel-by-client`,
+                {
+                  method: 'PUT',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({userId: clienteUserId}), // Enviar el ID del cliente para verificación en backend
+                },
               );
+
+              const responseData = await response.json();
+
+              if (response.ok && responseData.appointment) {
+                setCitaActual(responseData.appointment); // Actualiza la cita local con la respuesta del backend
+                Alert.alert('Éxito', 'Cita cancelada correctamente.');
+                // Notificar a la pantalla anterior para refrescar
+                if (clienteUserId && navigation.canGoBack()) {
+                  // Podrías navegar a AppointmentsScreen específicamente si es mejor UX
+                  navigation.navigate('AppointmentsScreen', {
+                    userId: clienteUserId,
+                    refresh: true,
+                  });
+                } else if (navigation.canGoBack()) {
+                  navigation.goBack();
+                }
+              } else {
+                Alert.alert(
+                  'Error al cancelar',
+                  responseData.error ||
+                    'No se pudo cancelar la cita. Intenta de nuevo.',
+                );
+              }
             } catch (error: any) {
               Alert.alert(
                 'Error de Red',
-                error.message || 'No se pudo conectar.',
+                error.message || 'No se pudo conectar con el servidor.',
               );
             } finally {
               setIsLoading(false);
@@ -212,6 +228,9 @@ const AppointmentDetailScreen: React.FC = () => {
       }
     }
   }
+  const canBeCancelledByClient =
+    ['Pendiente', 'Aceptada'].includes(citaActual.estado_de_cita) &&
+    citaActual.estado_pago !== 'Pagado';
 
   return (
     <ScrollView
@@ -298,19 +317,18 @@ const AppointmentDetailScreen: React.FC = () => {
         </View>
       )}
 
-      {['Pendiente', 'Aceptada'].includes(citaActual.estado_de_cita) &&
-        citaActual.estado_pago !== 'Pagado' && (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.cancelByClientButton]}
-            onPress={handleCancelAppointmentByClient}
-            disabled={isLoading}>
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.actionButtonText}>Cancelar Mi Cita</Text>
-            )}
-          </TouchableOpacity>
-        )}
+      {canBeCancelledByClient && ( // Usar la variable para mostrar el botón
+        <TouchableOpacity
+          style={[styles.actionButton, styles.cancelByClientButton]}
+          onPress={handleCancelAppointmentByClient}
+          disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.actionButtonText}>Cancelar Mi Cita</Text>
+          )}
+        </TouchableOpacity>
+      )}
       {isLoading && (
         <ActivityIndicator style={{marginTop: 10}} size="small" color="#333" />
       )}
@@ -400,8 +418,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionButtonText: {color: '#fff', fontSize: 16, fontWeight: 'bold'},
-  proceedToPaymentButton: {backgroundColor: '#007bff'}, // Azul primario
-  cancelByClientButton: {backgroundColor: '#6c757d', marginTop: 10}, // Gris para cancelar
+  proceedToPaymentButton: {backgroundColor: '#222'}, // Azul primario
+  cancelByClientButton: {backgroundColor: '#FF3838', marginTop: 10}, // Gris para cancelar
   paidMessageContainer: {
     padding: 15,
     backgroundColor: '#d1e7dd', // Verde claro
