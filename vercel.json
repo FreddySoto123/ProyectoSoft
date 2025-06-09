@@ -2,11 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "barbersmart-backend/package.json",
-      "use": "@vercel/node",
-      "config": {
-        "project": "barbersmart-backend"
-      }
+      "src": "barbersmart-backend/index.js", 
+      "use": "@vercel/node"
     },
     {
       "src": "package.json",
@@ -19,7 +16,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "barbersmart-backend/index.js"
+      "dest": "/barbersmart-backend/index.js" 
     },
     {"handle": "filesystem"},
     {"src": "/(.*)", "dest": "/index.html"}
