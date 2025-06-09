@@ -22,7 +22,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: { userId: string; name: string; rol: string };
-  BarberDashboard: { userId: string; name: string; rol: string };
+   BarberHomeScreen: { userId: string; name: string; rol: string };
   // ... tus otras rutas
   Profile: { userId: string };
   SelectBarbershop: undefined;
@@ -45,6 +45,8 @@ export type RootStackParamList = {
     hairstyleImageUri?: string;
   };
   FaceShapeScreen: { userId: string; currentFaceShape?: string | null };
+   BarberAppointmentsList: { barberUserId: string; barberName: string };
+  BarberAppointmentDetail: { appointmentId: number; barberName: string };
 };
 
 
@@ -65,7 +67,7 @@ const LoginScreen = () => {
     console.log('FRONTEND: Intentando iniciar sesión con:', {email, password});
 
     try {
-      const response = await fetch('http://172.172.9.19:3001/api/auth/login', {
+      const response = await fetch('http://192.168.1.210:3001/api/auth/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({email: email.trim(), password}), // Enviar email sin espacios
@@ -107,8 +109,8 @@ const LoginScreen = () => {
         const userIdStr = String(data.user.id);
 
         if (data.user.rol === 'Barbero') {
-          console.log('FRONTEND: Usuario es Barbero, navegando a BarberDashboard');
-          navigation.replace('BarberDashboard', {
+          console.log('FRONTEND: Usuario es Barbero, navegando a BarberHomeScreen');
+          navigation.replace('BarberHomeScreen', {
             userId: userIdStr,
             name: data.user.name,
             rol: data.user.rol,

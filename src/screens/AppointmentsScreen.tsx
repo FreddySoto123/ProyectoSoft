@@ -7,19 +7,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  StatusBar, // Added for consistency if you style StatusBar per screen
+  StatusBar,
+  TouchableOpacity,
+  RefreshControl
 } from 'react-native';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../screens/navigation/AuthNavigator'; // Ajusta la ruta
 
-// Assuming RootStackParamList is exported from your AuthNavigator or a central types file
-// Adjust the path accordingly based on your project structure.
-// For example, if AuthNavigator.tsx is in ../navigation/AuthNavigator.tsx:
-import type { RootStackParamList } from '../screens/navigation/AuthNavigator';
-// Or if you have it in a global types file, e.g., ../types/navigation.ts:
-// import type { RootStackParamList } from '../types/navigation';
-
-// Define Prop types for this screen
 type AppointmentsScreenRouteProp = RouteProp<RootStackParamList, 'AppointmentsScreen'>;
 type AppointmentsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AppointmentsScreen'>;
 
@@ -29,60 +24,111 @@ interface Appointment {
   hora: string;
   nombre_barberia: string;
   nombre_barbero: string;
-  servicios: string[]; // Array of service names
+  servicios: string[]; // Se espera un array de strings
+  estado_de_cita: boolean;
+  precio_total?: number;
 }
 
 interface Props {
   route: AppointmentsScreenRouteProp;
-  navigation: AppointmentsScreenNavigationProp; // Kept for potential future use
+  navigation: AppointmentsScreenNavigationProp;
 }
 
-const AppointmentsScreen: React.FC<Props> = ({ route, navigation }) => {
-  // console.log('AppointmentsScreen - route.params:', route.params); // For debugging
-  const userId = route.params?.userId; // Can be number, string, or null (from initialParams)
+const formatAppointmentStatus = (isAccepted: boolean): string => {
+  return isAccepted ? 'Aceptada' : 'Pendiente';
+};
 
+const getStatusStyle = (isAccepted: boolean) => {
+  return isAccepted ? styles.statusAccepted : styles.statusPending;
+};
+
+const AppointmentsScreen: React.FC<Props> = ({ route, navigation }) => {
+  const userId = route.params?.userId;
   const [citas, setCitas] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null); // Para mostrar error si fetch falla
 
-  useEffect(() => {
-    // Ensure userId is a valid value (not null, undefined, 0, or empty string)
-    // User IDs are typically positive numbers or non-empty strings.
+  const fetchCitas = React.useCallback(async () => {
     if (!userId) {
       Alert.alert('Error', 'ID de usuario no válido o no proporcionado.');
       console.warn('AppointmentsScreen: useEffect - userId is invalid:', userId);
       setLoading(false);
-      setCitas([]); // Clear any existing citas if userId becomes invalid
+      setRefreshing(false);
+      setCitas([]);
+      setFetchError('ID de usuario no válido.'); // Guardar error
       return;
     }
 
-    const fetchCitas = async () => {
-      setLoading(true); // Set loading true at the start of fetch
-      try {
-        // Replace with your actual API endpoint if different, or use an env variable
-        const response = await fetch(`http://172.172.9.19:3001/api/citas/user/${userId}`);
-        const data = await response.json();
+    console.log('AppointmentsScreen: Fetching citas para userId:', userId);
+    if (!refreshing) setLoading(true);
+    setFetchError(null); // Limpiar error anterior
 
-        if (response.ok) {
+    try {
+      const response = await fetch(`http://192.168.1.210:3001/api/citas/user/${userId}`);
+      const responseText = await response.text(); // Leer como texto primero
+      let data;
+
+      try {
+        data = JSON.parse(responseText);
+        // --- LOG CRUCIAL ---
+        console.log('AppointmentsScreen: Citas recibidas (RAW data del backend):', JSON.stringify(data, null, 2));
+      } catch (jsonError: any) {
+        console.error('AppointmentsScreen: Error parseando JSON:', jsonError.message, responseText);
+        Alert.alert('Error de Formato', `Respuesta inesperada del servidor. Status: ${response.status}`);
+        setCitas([]);
+        setFetchError('Error de formato en la respuesta del servidor.');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      if (response.ok) {
+        // --- VERIFICACIÓN ANTES DE SETCITAS ---
+        if (Array.isArray(data)) {
+          // Opcional: Validar la estructura de cada item si es necesario
+          // data.forEach(item => {
+          //   if (typeof item.id !== 'number' || typeof item.nombre_barberia !== 'string' /* etc. */) {
+          //     console.warn("AppointmentsScreen: Item con estructura inesperada:", item);
+          //   }
+          // });
           setCitas(data);
         } else {
-          // data.error comes from the backend's JSON response on error
-          console.error('Error fetching citas:', data.error || `Status ${response.status}`);
-          Alert.alert('Error', data.error || 'No se pudieron cargar tus citas.');
-          setCitas([]); // Clear citas on error
+          console.error('AppointmentsScreen: Error - La data recibida del backend no es un array:', data);
+          Alert.alert('Error de Datos', 'El formato de datos recibido del servidor es incorrecto.');
+          setCitas([]);
+          setFetchError('Formato de datos incorrecto del servidor.');
         }
-      } catch (error) {
-        console.error('Network error fetching citas:', error);
-        Alert.alert('Error de Red', 'No se pudo conectar al servidor para obtener tus citas.');
-        setCitas([]); // Clear citas on network error
-      } finally {
-        setLoading(false);
+      } else {
+        const errorMessage = data?.error || `Error ${response.status} al cargar citas.`;
+        console.error('AppointmentsScreen: Error fetching citas (backend):', errorMessage, data);
+        Alert.alert('Error', errorMessage);
+        setCitas([]);
+        setFetchError(errorMessage);
       }
-    };
+    } catch (error: any) {
+      console.error('AppointmentsScreen: Network error fetching citas:', error.message, error);
+      Alert.alert('Error de Red', 'No se pudo conectar al servidor para obtener tus citas.');
+      setCitas([]);
+      setFetchError('Error de red al conectar con el servidor.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [userId, refreshing]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchCitas();
+    }, [fetchCitas])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
     fetchCitas();
-  }, [userId]); // Re-run effect if userId changes
+  };
 
-  if (loading) {
+  if (loading && !refreshing && citas.length === 0 && !fetchError) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#1A1A1A" />
@@ -91,7 +137,20 @@ const AppointmentsScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   }
 
-  if (!userId) { // This case should ideally be caught by the useEffect guard, but kept as a fallback UI
+  // Mostrar error de fetch si ocurrió
+  if (fetchError && citas.length === 0) {
+      return (
+          <View style={styles.centered}>
+              <Text style={styles.errorTextTitle}>Error al Cargar</Text>
+              <Text style={styles.errorTextMessage}>{fetchError}</Text>
+              <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
+                  <Text style={styles.retryButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+          </View>
+      );
+  }
+
+  if (!userId && !loading && !fetchError) {
     return (
       <View style={styles.centered}>
         <Text style={styles.infoText}>No se pudo identificar al usuario para cargar las citas.</Text>
@@ -99,58 +158,133 @@ const AppointmentsScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   }
 
-  if (citas.length === 0) {
+  if (citas.length === 0 && !loading && !fetchError) {
     return (
       <View style={styles.centered}>
         <Text style={styles.infoText}>No tienes citas programadas.</Text>
-        {/* Optionally, add a button to schedule a new appointment */}
-        {/* <TouchableOpacity onPress={() => navigation.navigate('SelectBarbershop')}>
-            <Text style={styles.buttonText}>Agendar una Cita</Text>
-          </TouchableOpacity> */}
+        <TouchableOpacity onPress={() => navigation.navigate('SelectBarbershop')} style={styles.scheduleButton}>
+            <Text style={styles.scheduleButtonText}>Agendar una Cita</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  const renderItem = ({ item }: { item: Appointment }) => (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>{item.nombre_barberia}</Text>
-      <Text style={styles.cardText}>
-        Fecha: {new Date(item.fecha).toLocaleDateString()} {/* Format date for better readability */}
-      </Text>
-      <Text style={styles.cardText}>Hora: {item.hora}</Text>
-      <Text style={styles.cardText}>Barbero: {item.nombre_barbero}</Text>
-      {item.servicios && item.servicios.length > 0 && (
-        <View style={styles.servicesContainer}>
-          <Text style={styles.cardTextBold}>Servicios:</Text>
-          {item.servicios.map((servicio, index) => (
-            <Text key={index} style={styles.serviceItem}>- {servicio}</Text>
-          ))}
+  // --- RENDER ITEM SIMPLIFICADO PARA DEPURACIÓN ---
+  const renderItem = ({ item }: { item: Appointment }) => {
+    console.log("APPOINTMENTS_SCREEN - Renderizando item ID:", item.id, "Nombre Barbería:", item.nombre_barberia, "Estado:", item.estado_de_cita);
+    try {
+      return (
+        <View style={styles.card}>
+          {/* <Text style={styles.cardTitle}>ID Cita: {item.id}</Text> // Puedes dejarlo o quitarlo */}
+
+          {/* PASO 1 y 2: Header con Nombre de barbería y Estado */}
+          {/* DESCOMENTA ESTE BLOQUE PRIMERO */}
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>{item.nombre_barberia !== null && item.nombre_barberia !== undefined ? item.nombre_barberia : 'N/A'}</Text>
+            <View style={[styles.statusBadge, getStatusStyle(item.estado_de_cita)]}>
+              <Text style={styles.statusText}>{formatAppointmentStatus(item.estado_de_cita)}</Text>
+            </View>
+          </View>
+
+          {/* PASO 3: Nombre del barbero */}
+          {/* LUEGO DESCOMENTA ESTA LÍNEA */}
+          <Text style={styles.cardText}>Barbero: {item.nombre_barbero !== null && item.nombre_barbero !== undefined ? item.nombre_barbero : 'N/A'}</Text> 
+
+          {/* PASO 4: Fecha */}
+          {/* LUEGO DESCOMENTA ESTE BLOQUE */}
+          
+          <Text style={styles.cardText}>
+            Fecha: {item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }) : 'N/A'}
+          </Text>
+          
+
+          {/* PASO 5: Hora */}
+          {/* LUEGO DESCOMENTA ESTA LÍNEA */}
+           <Text style={styles.cardText}>Hora: {item.hora ? item.hora.substring(0,5) : 'N/A'}</Text> 
+
+          {/* PASO 6: Servicios */}
+          {/* LUEGO DESCOMENTA ESTE BLOQUE */}
+          
+          {item.servicios && Array.isArray(item.servicios) && item.servicios.length > 0 && (
+            <View style={styles.servicesContainer}>
+              <Text style={styles.cardTextBold}>Servicios:</Text>
+              {item.servicios.map((servicio, index) => (
+                <Text key={index} style={styles.serviceItem}>- {typeof servicio === 'string' ? servicio : 'Servicio inválido'}</Text>
+              ))}
+            </View>
+          )}
+          
+
+          {/* PASO 7: Precio total */}
+          {/* FINALMENTE DESCOMENTA ESTE BLOQUE */}
+          
+          {item.precio_total != null && ( // != null cubre undefined y null
+            <Text style={styles.priceText}>Precio Total: Bs {Number(item.precio_total).toFixed(2)}</Text>
+          )}
+          
         </View>
-      )}
-    </View>
-  );
+      );
+    } catch (renderError: any) {
+      console.error("APPOINTMENTS_SCREEN - ERROR DENTRO DE RENDER ITEM para cita ID:", item.id, renderError.message, renderError.stack);
+      return (
+        <View style={{ padding: 10, marginVertical: 5, borderColor: 'red', borderWidth: 1 }}>
+          <Text>Error renderizando item {item.id}</Text>
+        </View>
+      );
+    }
+  };
+
 
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor="#F4F0E8" />
       <FlatList
         data={citas}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()} // Fallback para key
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1A1A1A"]} />
+        }
       />
     </>
   );
 };
 
 const styles = StyleSheet.create({
+  // ... (tus estilos existentes) ...
+  // Añadir estilos para el mensaje de error si fetch falla
+  errorTextTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  errorTextMessage: {
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#1A1A1A',
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F4F0E8', // Match background with list
+    backgroundColor: '#F4F0E8',
   },
   loadingText: {
     marginTop: 10,
@@ -161,6 +295,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#555',
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  scheduleButton: {
+    backgroundColor: '#1A1A1A',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    elevation: 2,
+  },
+  scheduleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   listContainer: {
     paddingVertical: 16,
@@ -172,22 +319,46 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
-    elevation: 3, // Android shadow
-    shadowColor: '#000', // iOS shadow
+    elevation: 3,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1A1A1A',
-    marginBottom: 8,
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  statusPending: {
+    backgroundColor: '#f39c12',
+  },
+  statusAccepted: {
+    backgroundColor: '#2ecc71',
   },
   cardText: {
     fontSize: 15,
     color: '#444',
-    marginBottom: 4,
+    marginBottom: 5,
     lineHeight: 22,
   },
   cardTextBold: {
@@ -208,13 +379,13 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     lineHeight: 20,
   },
-  // Optional: Button style if you add a "Schedule Appointment" button
-  // buttonText: {
-  //   marginTop: 20,
-  //   fontSize: 16,
-  //   color: '#007AFF', // Example button color
-  //   fontWeight: 'bold',
-  // },
+  priceText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginTop: 8,
+    textAlign: 'right',
+  }
 });
 
-export default AppointmentsScreen; 
+export default AppointmentsScreen;

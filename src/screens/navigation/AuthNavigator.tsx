@@ -18,12 +18,13 @@ import HairstyleSelectionScreen from '../simulation/HairstyleSelectionScreen';
 import SimulationResultScreen from '../simulation/SimulationResultScreen';
 import CitaScreen from '../CitaScreen'; // Asegúrate que la importación es correcta
 import AppointmentsScreen from '../AppointmentsScreen';
-import BarberDashboardScreen from '../BarberDashboardScreen';
+import BarberHomeScreen from '../BarberHomeScreen';
+import BarberAppointmentsListScreen from '../BarberAppointmentsListScreen';
+import BarberAppointmentDetailScreen from '../BarberAppointmentDetailScreen';
 // Define tu RootStackParamList
 export type RootStackParamList = { // Exporta el tipo si lo usas en otros archivos
   Login: undefined;
   Register: undefined;
-  BarberDashboard: { userId: string; name: string; rol: string }; 
   Home: { userId: string; name: string };
   Services: undefined;
   Simulation: undefined;
@@ -46,6 +47,9 @@ export type RootStackParamList = { // Exporta el tipo si lo usas en otros archiv
     user: { id: number; nombre: string /* Ajusta el tipo de user según lo que pases */ };
   };
   AppointmentsScreen: { userId: number | string };
+   BarberHomeScreen: { userId: string; name: string; rol: string }; // Pantalla principal del barbero
+  BarberAppointmentsList: { barberUserId: string; barberName: string }; // Lista de citas del barbero
+  BarberAppointmentDetail: { appointmentId: number; barberName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -133,8 +137,21 @@ const AuthNavigator = () => (
         options={{ title: 'Mis Citas' }}
         initialParams={{ userId: null }} // o undefined
       />
-       <Stack.Screen name="BarberDashboard" component={BarberDashboardScreen} options={{ title: 'Panel de Barbero' /* , headerLeft: () => null */ }} />
-
+<Stack.Screen
+        name="BarberHomeScreen" // Usar este en lugar de BarberDashboard
+        component={BarberHomeScreen}
+        options={{ headerShown: false }} // El header está dentro de la pantalla
+      />
+      <Stack.Screen
+        name="BarberAppointmentsList"
+        component={BarberAppointmentsListScreen}
+        options={({route}) => ({ title: `Citas de ${route.params.barberName}`})}
+      />
+      <Stack.Screen
+        name="BarberAppointmentDetail"
+        component={BarberAppointmentDetailScreen}
+        options={{ title: 'Detalle de Cita' }}
+      />
     </Stack.Navigator>
   </NavigationContainer>
 );

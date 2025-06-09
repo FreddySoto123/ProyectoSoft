@@ -83,7 +83,7 @@ const BarberProfileScreen: React.FC<Props> = ({route, navigation}) => {
         // Si usas emulador Android y tu API corre en localhost en tu PC: http://10.0.2.2:3001
         // Si usas dispositivo físico, usa la IP de tu PC en la red local: http://TU_IP_LOCAL:3001
         const response = await fetch(
-          `http://172.172.9.19:3001/api/barbers/profile/${barberUserId}`, // Ajusta esta URL si es necesario
+          `http://192.168.1.210:3001/api/barbers/profile/${barberUserId}`, // Ajusta esta URL si es necesario
         );
         const data = await response.json();
 
