@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type RootStackParamList = {
   Home: {userId: string; name: string};
@@ -50,13 +51,13 @@ const HomeScreen: React.FC = () => {
       id: '1',
       title: 'Agendar una Cita',
       screen: 'CitaScreen',
-      iconName: 'calendar-plus',
+      iconName: 'plus-circle',
     },
     {
       id: '2',
       title: 'Mis Citas',
       screen: 'AppointmentsScreen',
-      iconName: 'calendar-check-outline',
+      iconName: 'calendar',
     },
     {
       id: '3',
@@ -161,10 +162,13 @@ const HomeScreen: React.FC = () => {
               style={styles.menuCard}
               onPress={() => handleMenuItemPress(item.screen, item.title)}>
               <View style={styles.menuIconContainer}>
-                <Text style={styles.iconPlaceholder}>
-                  {item.iconName.substring(0, 1).toUpperCase()}
-                </Text>
+                <MaterialCommunityIcons
+                  name={item.iconName}
+                  size={48}
+                  color="#000000"
+                />
               </View>
+
               <Text style={styles.menuCardText}>{item.title}</Text>
             </TouchableOpacity>
           ))}
