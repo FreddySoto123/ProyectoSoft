@@ -5,8 +5,8 @@ const rateLimit = require('express-rate-limit'); // <--- IMPORTAR
 const {
   register,
   login,
-  updateProfile,
-  getProfile,
+  getMyProfile,
+  updateMyProfile,
   initiatePasswordReset,
   verifyResetCode,
   resetPasswordWithCode,
@@ -50,8 +50,11 @@ router.post('/register', register); // Considera un rate limiter diferente, meno
 
 // Rutas que requieren autenticación (token JWT)
 // El middleware authMiddleware debería ir aquí para proteger estas rutas
-router.put('/profile/:id', authMiddleware, updateProfile);
-router.get('/profile/:id', authMiddleware, getProfile); // Este es el que queremos proteger de enumeración después
+// Ruta para obtener el perfil DEL USUARIO ACTUALMENTE AUTENTICADO
+router.get('/profile/me', authMiddleware, getMyProfile);
+
+// Ruta para actualizar el perfil DEL USUARIO ACTUALMENTE AUTENTICADO
+router.put('/profile/me', authMiddleware, updateMyProfile);
 
 router.post('/initiate-password-reset', initiatePasswordReset); // Podría tener su propio rate limiter
 router.post('/verify-reset-code', verifyResetCode);

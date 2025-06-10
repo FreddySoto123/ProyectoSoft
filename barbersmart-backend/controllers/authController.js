@@ -131,20 +131,23 @@ const login = async (req, res) => {
   }
 };
 
-const updateProfile = async (req, res) => {
+const updateMyProfile = async (req, res) => {
   const userId = req.user?.userId; // ID del usuario autenticado
-  const {name, email, avatar, telefono, forma_rostro} = req.body; // Datos a actualizar
+  const {
+    name,
+    email,
+    avatar,
+    telefono,
+    forma_rostro /*, currentPassword, newPassword */,
+  } = req.body;
 
   if (!userId) {
-    return res
-      .status(400)
-      .json({error: 'ID de usuario no encontrado en el token.'});
+    return res.status(400).json({error: 'Autenticación requerida.'});
   }
-
   console.log(
-    `--- UPDATE PROFILE (BACKEND) for authenticated User ID: ${userId} ---`,
+    `BACKEND: Actualizando perfil para usuario autenticado ID: ${userId} con datos:`,
+    req.body,
   );
-  console.log('Request Body para actualizar:', req.body);
 
   try {
     const fieldsToUpdate = [];
@@ -189,19 +192,18 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    values.push(id);
+    values.push(userId); // Para la cláusula WHERE id = $X
 
     const querySetClause = fieldsToUpdate.join(', ');
     const query = `
-      UPDATE users
+      UPDATE users 
       SET ${querySetClause}, updated_at = NOW()
-      WHERE id = $${paramCount}
-      RETURNING id, name, email, avatar, telefono, forma_rostro, rol;
+      WHERE id = $${paramCount} 
+      RETURNING id, name, email, avatar, telefono, rol, forma_rostro;
     `;
 
-    console.log('Update Query:', query);
-    console.log('Values:', values);
-
+    console.log('BACKEND updateMyProfile Query:', query);
+    console.log('BACKEND updateMyProfile Values:', values);
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
@@ -209,69 +211,52 @@ const updateProfile = async (req, res) => {
         .status(404)
         .json({error: 'Usuario no encontrado para actualizar.'});
     }
-
-    console.log('Perfil actualizado exitosamente.');
-    return res
-      .status(200)
-      .json({message: 'Perfil actualizado exitosamente', user: result.rows[0]});
+    res.json({
+      message: 'Perfil actualizado exitosamente',
+      user: result.rows[0],
+    });
   } catch (error) {
-    console.error('--- ERROR EN UPDATE PROFILE (BACKEND) ---');
-    console.error('Mensaje:', error.message);
-    console.error('Stack:', error.stack);
-    if (error.code === '23505') {
+    console.error('BACKEND updateMyProfile CATCH:', error.message, error.stack);
+    if (error.code === '23505' && error.constraint === 'users_email_key') {
+      // Asumiendo que tienes un constraint unique en email
       return res
         .status(409)
         .json({error: 'El correo electrónico ya está en uso por otra cuenta.'});
     }
-    if (!res.headersSent) {
-      return res
-        .status(500)
-        .json({error: 'Error del servidor al actualizar el perfil.'});
-    }
+    res
+      .status(500)
+      .json({
+        error: 'Error del servidor al actualizar el perfil.',
+        details: error.message,
+      });
   }
 };
 
-const getProfile = async (req, res) => {
-  // El ID del usuario ahora viene del token decodificado, añadido por authMiddleware
-  const userId = req.user?.userId; // Usar optional chaining por si acaso
+const getMyProfile = async (req, res) => {
+  // El userId viene del token JWT verificado por authMiddleware
+  const userId = req.user?.userId;
 
   if (!userId) {
-    // Esto no debería ocurrir si authMiddleware funciona bien, pero como defensa
-    return res
-      .status(400)
-      .json({error: 'ID de usuario no encontrado en el token.'});
+    // Esto no debería pasar si authMiddleware funciona, pero es una defensa
+    return res.status(400).json({error: 'Autenticación requerida.'});
   }
-
   console.log(
-    `--- GET PROFILE (BACKEND) for authenticated User ID: ${userId} ---`,
+    `BACKEND: Solicitud de perfil para usuario autenticado ID: ${userId}`,
   );
-
   try {
     const result = await pool.query(
-      'SELECT id, name, email, avatar, telefono, forma_rostro, rol FROM users WHERE id = $1',
-      [userId], // Usar el userId del token
+      'SELECT id, name, email, avatar, telefono, rol, forma_rostro FROM users WHERE id = $1',
+      [userId],
     );
-
     if (result.rows.length === 0) {
-      console.warn(
-        'GetProfile: Usuario no encontrado para ID del token:',
-        userId,
-      );
-      return res.status(404).json({error: 'Usuario no encontrado.'});
+      return res.status(404).json({error: 'Perfil de usuario no encontrado.'});
     }
-
-    console.log('Perfil encontrado para usuario autenticado.');
+    // No es necesario devolver la contraseña, incluso hasheada.
     const {password, ...userProfile} = result.rows[0];
-    return res.status(200).json({user: userProfile});
+    res.json({user: userProfile});
   } catch (error) {
-    console.error('--- ERROR EN GET PROFILE (BACKEND) ---');
-    console.error('Mensaje:', error.message);
-    console.error('Stack:', error.stack);
-    if (!res.headersSent) {
-      return res
-        .status(500)
-        .json({error: 'Error del servidor al obtener el perfil.'});
-    }
+    console.error('BACKEND getMyProfile CATCH:', error.message, error.stack);
+    res.status(500).json({error: 'Error del servidor al obtener el perfil.'});
   }
 };
 
@@ -528,8 +513,8 @@ const resetPasswordWithCode = async (req, res) => {
 module.exports = {
   register,
   login,
-  updateProfile,
-  getProfile,
+  updateMyProfile,
+  getMyProfile,
   initiatePasswordReset,
   verifyResetCode,
   resetPasswordWithCode,
