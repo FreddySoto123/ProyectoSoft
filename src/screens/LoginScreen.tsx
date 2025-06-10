@@ -26,6 +26,9 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   VerifyCode: {email: string};
   ResetPassword: {email: string; code: string};
+   BarberHomeScreen: { userId: string; name: string; rol: string };
+  // ... tus otras rutas
+  Profile: { userId: string };
   SelectBarbershop: undefined;
   BarbershopDetail: {barbershopId: number | string; barbershopName: string};
   BarberProfile: {barberUserId: number | string; barberName: string};
@@ -45,7 +48,9 @@ export type RootStackParamList = {
     hairstyleId: string | number;
     hairstyleImageUri?: string;
   };
-  FaceShapeScreen: {userId: string; currentFaceShape?: string | null};
+  FaceShapeScreen: { userId: string; currentFaceShape?: string | null };
+   BarberAppointmentsList: { barberUserId: string; barberName: string };
+  BarberAppointmentDetail: { appointmentId: number; barberName: string };
 };
 
 const LoginScreen = () => {
@@ -132,10 +137,8 @@ const LoginScreen = () => {
         const userIdStr = String(data.user.id);
 
         if (data.user.rol === 'Barbero') {
-          console.log(
-            'FRONTEND: Usuario es Barbero, navegando a BarberDashboard',
-          );
-          navigation.replace('BarberDashboard', {
+          console.log('FRONTEND: Usuario es Barbero, navegando a BarberHomeScreen');
+          navigation.replace('BarberHomeScreen', {
             userId: userIdStr,
             name: data.user.name,
             rol: data.user.rol,
