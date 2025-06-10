@@ -83,7 +83,7 @@ const AuthNavigator = () => (
       <Stack.Screen
         name="Home"
         component={HomeScreen}
-        options={{title: 'Inicio'}}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="Services"
