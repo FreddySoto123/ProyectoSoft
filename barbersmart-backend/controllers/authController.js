@@ -105,11 +105,9 @@ const login = async (req, res) => {
       rol: user.rol,
       name: user.name,
     };
-    const token = jwt.sign(
-      tokenPayload,
-      process.env.JWT_SECRET,
-      {expiresIn: '24h'},
-    );
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: '24h',
+    });
     console.log('Token JWT generado.');
 
     const {password: _, ...userWithoutPassword} = user;
@@ -134,15 +132,19 @@ const login = async (req, res) => {
 };
 
 const updateProfile = async (req, res) => {
-  const {id} = req.params;
-  const {name, email, avatar, telefono, forma_rostro} = req.body;
+  const userId = req.user?.userId; // ID del usuario autenticado
+  const {name, email, avatar, telefono, forma_rostro} = req.body; // Datos a actualizar
 
-  console.log(`--- UPDATE PROFILE (BACKEND) for ID: ${id} ---`);
-  console.log('Request Body:', req.body);
-
-  if (!id) {
-    return res.status(400).json({error: 'ID de usuario es requerido.'});
+  if (!userId) {
+    return res
+      .status(400)
+      .json({error: 'ID de usuario no encontrado en el token.'});
   }
+
+  console.log(
+    `--- UPDATE PROFILE (BACKEND) for authenticated User ID: ${userId} ---`,
+  );
+  console.log('Request Body para actualizar:', req.body);
 
   try {
     const fieldsToUpdate = [];
@@ -230,22 +232,37 @@ const updateProfile = async (req, res) => {
 };
 
 const getProfile = async (req, res) => {
-  const {id} = req.params;
-  console.log(`--- GET PROFILE (BACKEND) for ID: ${id} ---`);
+  // El ID del usuario ahora viene del token decodificado, añadido por authMiddleware
+  const userId = req.user?.userId; // Usar optional chaining por si acaso
+
+  if (!userId) {
+    // Esto no debería ocurrir si authMiddleware funciona bien, pero como defensa
+    return res
+      .status(400)
+      .json({error: 'ID de usuario no encontrado en el token.'});
+  }
+
+  console.log(
+    `--- GET PROFILE (BACKEND) for authenticated User ID: ${userId} ---`,
+  );
 
   try {
     const result = await pool.query(
       'SELECT id, name, email, avatar, telefono, forma_rostro, rol FROM users WHERE id = $1',
-      [id],
+      [userId], // Usar el userId del token
     );
 
     if (result.rows.length === 0) {
-      console.warn('GetProfile: Usuario no encontrado para ID:', id);
+      console.warn(
+        'GetProfile: Usuario no encontrado para ID del token:',
+        userId,
+      );
       return res.status(404).json({error: 'Usuario no encontrado.'});
     }
 
-    console.log('Perfil encontrado.');
-    return res.status(200).json({user: result.rows[0]});
+    console.log('Perfil encontrado para usuario autenticado.');
+    const {password, ...userProfile} = result.rows[0];
+    return res.status(200).json({user: userProfile});
   } catch (error) {
     console.error('--- ERROR EN GET PROFILE (BACKEND) ---');
     console.error('Mensaje:', error.message);
