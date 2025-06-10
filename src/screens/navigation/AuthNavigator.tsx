@@ -35,7 +35,7 @@ export type RootStackParamList = {
   VerifyCode: {email: string};
   ResetPassword: {email: string; code: string};
   Register: undefined;
-  Home: { userId: string; name: string };
+  Home: {userId: string; name: string};
   Services: undefined;
   Simulation: undefined;
   Profile: {userId: string};
@@ -62,7 +62,7 @@ export type RootStackParamList = {
   AppointmentDetail: {cita: CitaConDetalles; userId: string | number};
   PaymentDataEntry: {cita: AppointmentFromBackend};
   BarberAppointmentDetail: {cita: CitaParaBarbero; onGoBack?: () => void};
-   BarberHomeScreen: { userId: string; name: string; rol: string }; // Pantalla principal del barbero
+  BarberHomeScreen: {userId: string; name: string; rol: string}; // Pantalla principal del barbero
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -160,15 +160,16 @@ const AuthNavigator = () => (
         name="AppointmentDetail"
         component={AppointmentDetailScreen}
         options={{title: 'Detalle de Cita'}}
-<Stack.Screen
+      />
+      <Stack.Screen
         name="BarberHomeScreen" // Usar este en lugar de BarberDashboard
         component={BarberHomeScreen}
-        options={{ headerShown: false }} // El header está dentro de la pantalla
+        options={{headerShown: false}} // El header está dentro de la pantalla
       />
       <Stack.Screen
         name="BarberAppointmentsList"
         component={BarberAppointmentsListScreen}
-        options={({route}) => ({ title: `Citas de ${route.params.barberName}`})}
+        options={({route}) => ({title: `Citas de ${route.params.barberName}`})}
       />
       <Stack.Screen
         name="BarberAppointmentDetail"
